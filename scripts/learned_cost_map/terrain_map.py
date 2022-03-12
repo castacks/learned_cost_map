@@ -362,6 +362,80 @@ class TerrainMap:
         'height_map_high': torch.zeros(3, 200, 200)
     }
 
+    def convert_local_to_pixel(self, local_path):
+        """Convert local_path to pixel space.
+        Local_path: N x 3 numpy array (x, y, theta)
+        Output: Nx3 Numpy array
+        """
+        x = local_path[:,0]
+        y = local_path[:,1]
+        theta = local_path[:,2]
+        pixel_x = (x/self.resolution.numpy()).astype(int)
+        pixel_y = ((y - self.origin[1].numpy())/self.resolution.numpy()).astype(int)
+
+        return np.vstack((pixel_x, pixel_y, theta)).T
+
+    def visualize_rgb_map(self, ax=None):
+        """Plot RGB Map. Assumes its first 3 dimensions of self.maps_tensor."""
+        rgb_map = self.maps_tensor.permute(1,2,0).numpy()[:,:,:3] # get rgb map
+        if ax is None: # make a new figure
+            plt.figure()
+            plt.imshow(rgb_map, origin="lower")
+        else:
+            # print("AX IS NOT NONE, not implemented")
+            ax.imshow(rgb_map, origin="lower")
+            ax.set_xlabel("X axis")
+            ax.set_ylabel("Y axis")
+
+        
+        if ax is None:
+            plt.show()
+
+    def visualize_map_with_path(self, local_path, ax=None):
+        """Visualize map overlaid with local path."""
+
+        # TODO: add animate ON
+        if ax is None:
+            fig = plt.figure()
+            map_ax = fig.add_subplot(111)
+            
+            # Convert from local space to pixel space
+            pixel_xyt = self.convert_local_to_pixel(local_path.numpy())
+            # Plot
+            self.visualize_rgb_map(map_ax)
+            map_ax.scatter(pixel_xyt[:,0], pixel_xyt[:,1], color='r')
+
+            plt.show()
+
+        else:
+            print("AX IS NOT NONE, not implemented")        
+
+    def animate_map_crops_fpv(self, crops, costs, fpv_images, local_path):
+        fig = plt.figure()
+        fig.suptitle('Cost visualizer')
+        map_ax = fig.add_subplot(131)
+        patch_ax = fig.add_subplot(132)
+        fpv_ax = fig.add_subplot(133)
+
+        pixel_xyt = self.convert_local_to_pixel(local_path.numpy())
+
+        for i in np.arange(crops.shape[0])[::3]:
+            map_ax.clear()
+            patch_ax.clear()
+
+            self.visualize_rgb_map(map_ax)
+            map_ax.scatter(pixel_xyt[i,0], pixel_xyt[i,1], color='r')
+            
+            img = crops[i].permute(1,2,0).numpy()[:,:,:3]
+            patch_ax.imshow(img)
+            patch_ax.set_title(f"Looking at patch {i}/{crops.shape[0]}. \n Cost: {costs[i]:.4f}")
+
+            fpv_ax.imshow(fpv_images[i,:3].permute(1,2,0).numpy())
+
+            plt.pause(0.01)
+            if i==0:
+                plt.pause(1)        
+
 
 if __name__ == "__main__":
     
@@ -434,74 +508,11 @@ if __name__ == "__main__":
     tm = TerrainMap(map_metadata=map_metadata, maps=maps)
 
     # Get dataset {crops, cost}
-    crops, cost, fpv_images, local_path = tm.get_labeled_crops(traj_all, crop_params)
-    # crops = tm.get_crop_batch(poses, crop_params)
-    original = tm.maps_tensor.permute(1,2,0).numpy()[:,:,:3]
-    fig = plt.figure()
-    fig.suptitle('Cost visualizer')
-    img_viewer = fig.add_subplot(131)
-    patch_viewer = fig.add_subplot(132)
-    fpv_viewer = fig.add_subplot(133)
-    origin = [0.0, -5.0]
-    for i in np.arange(crops.shape[0])[::3]:
-        img_viewer.clear()
-        patch_viewer.clear()
-        x = local_path[i,0]
-        y = local_path[i,1]
-        theta = local_path[i,2]
-        theta_deg = theta*180/np.pi
-        pixel_x = int((x/resolution))
-        pixel_y = int((y - origin[1])/resolution)
-        img_viewer.scatter(pixel_x, pixel_y, color='r')
-        pixel_dx = int(crop_width/resolution)*np.cos(theta)
-        pixel_dy = int(crop_width/resolution)*np.sin(theta)
-        img_viewer.arrow(pixel_x-0.5*pixel_dx, pixel_y-0.5*pixel_dy, pixel_dx, pixel_dy, color="red")
-        img_viewer.imshow(original, origin="lower")
+    crops, costs, fpv_images, local_path = tm.get_labeled_crops(traj_all, crop_params)
 
-        pixel_crop_width = int(crop_width/resolution)
-        corners = 0.5 * np.array([[pixel_crop_width, pixel_crop_width],
-                                    [pixel_crop_width, -pixel_crop_width], [-pixel_crop_width, -pixel_crop_width], [-pixel_crop_width, pixel_crop_width], [pixel_crop_width, pixel_crop_width]])
-        rot = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-        print(f"Original corners: {corners}")
-        print(f"Corners expanded dims: {np.expand_dims(corners, axis=2)}")
-        print(f"square matmul: {np.matmul(rot, np.expand_dims(corners, axis=2)).shape}")
-        square = np.matmul(rot, np.expand_dims(corners, axis=2))[:, :, 0] + np.array([pixel_x, pixel_y])
-        img_viewer.plot(square[:, 0], square[:, 1], c='r')
-
-        img_viewer.set_title(f"Current pose: x={pixel_x} y={pixel_y}, yaw={(theta_deg%360.):.2f}")
-        img_viewer.set_xlabel("X axis")
-        img_viewer.set_ylabel("Y axis")
-        img_viewer.imshow(original, origin="lower")
-        
-        img = crops[i].permute(1,2,0).numpy()[:,:,:3]
-        patch_viewer.imshow(img)
-        patch_viewer.set_title(f"Looking at patch {i}/{crops.shape[0]}. Cost: {cost[i]:.4f}")
-
-        fpv_viewer.imshow(fpv_images[i,:3].permute(1,2,0).numpy())
-
-        plt.pause(0.01)
-        if i==0:
-            plt.pause(1)
-
-    # pixel_x = (local_path[:,0]/resolution).numpy().astype(int)
-    # pixel_y = ((local_path[:,1] + 5)/resolution).numpy().astype(int)
-    # print(f"crops shape: {crops.shape}")
-    # print(f"cost shape: {cost.shape}")
-
+    # Visualizations
+    # tm.visualize_rgb_map()
+    # tm.visualize_map_with_path(local_path, ax=None)
+    tm.animate_map_crops_fpv(crops, costs, fpv_images, local_path)
     
-    # fig = plt.figure()
-    plt.imshow(original, origin="lower")
-    # plt.plot(pixel_x, pixel_y)
-    plt.show()
-
-
-    # for hi in range(10):
-    #     t = hi*10
-    #     plt.subplot(1,2,1)
-    #     plt.imshow(fpv_images[t,:3].permute(1,2,0).numpy())
-    #     plt.subplot(1,2,2)
-    #     plt.imshow(crops[t,:3].permute(1,2,0).numpy())
-    #     plt.title(t)
-    #     plt.show()
-
     # torch.save(crops, '/home/mateo/SARA/src/sara_ws/src/traversability_cost/scripts/crops.pt')
