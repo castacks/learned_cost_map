@@ -271,60 +271,6 @@ class TerrainMap:
         crops = self.get_crop_path(local_path, crop_params)
         fpv_images = trajectory['observation']['image_rgb']
 
-        
-
-
-        # DEBUG
-        # print(f"Crops shape: {crops.shape}")
-
-        # original = tm.maps_tensor.permute(1,2,0).numpy()[:,:,:3]
-        # fig = plt.figure()
-        # fig.suptitle('Cost visualizer')
-        # img_viewer = fig.add_subplot(121)
-        # patch_viewer = fig.add_subplot(122)
-
-        # for i in range(crops.shape[0]):
-        #     img = crops[i].permute(1,2,0).numpy()[:,:,:3]
-
-        #     img_viewer.clear()
-        #     patch_viewer.clear()
-
-        #     x = local_path[i,0]
-        #     y = local_path[i,1]
-        #     theta = local_path[i,2]
-        #     theta_deg = theta*180/np.pi
-        #     pixel_x = int((x/self.resolution))
-        #     pixel_y = int((y - self.origin[1])/self.resolution)
-
-        #     pixel_dx = int(crop_width/self.resolution)*np.cos(theta)
-        #     pixel_dy = int(crop_width/self.resolution)*np.sin(theta)
-
-        #     img_viewer.plot(pixel_x, pixel_y, marker='o', color='red')
-            
-        #     img_viewer.arrow(pixel_x-0.5*pixel_dx, pixel_y-0.5*pixel_dy, pixel_dx, pixel_dy, color="red")
-
-        #     pixel_crop_width = int(crop_width/self.resolution)
-        #     corners = 0.5 * np.array([[pixel_crop_width, pixel_crop_width],
-        #                               [pixel_crop_width, -pixel_crop_width], [-pixel_crop_width, -pixel_crop_width], [-pixel_crop_width, pixel_crop_width], [pixel_crop_width, pixel_crop_width]])
-        #     rot = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
-        #     print(f"Original corners: {corners}")
-        #     print(f"Corners expanded dims: {np.expand_dims(corners, axis=2)}")
-        #     print(f"square matmul: {np.matmul(rot, np.expand_dims(corners, axis=2)).shape}")
-        #     square = np.matmul(rot, np.expand_dims(corners, axis=2))[:, :, 0] + np.array([pixel_x, pixel_y])
-        #     img_viewer.plot(square[:, 0], square[:, 1], c='r')
-
-        #     img_viewer.set_title(f"Current pose: x={pixel_x} y={pixel_y}, yaw={(theta_deg%360.):.2f}")
-        #     img_viewer.set_xlabel("X axis")
-        #     img_viewer.set_ylabel("Y axis")
-        #     img_viewer.imshow(original, origin="lower")
-            
-
-        #     patch_viewer.imshow(img)
-        #     patch_viewer.set_title(f"Looking at patch {i}/{crops.shape[0]}. Cost: {cost[i]:.4f}")
-        #     plt.pause(0.01)
-        #     if i == 0:
-        #         plt.pause(15)
-
         return crops, cost, fpv_images, local_path
 
 
@@ -397,13 +343,13 @@ class TerrainMap:
         # TODO: add animate ON
         if ax is None:
             fig = plt.figure()
-            map_ax = fig.add_subplot(111)
+            ax = fig.add_subplot(111)
             
             # Convert from local space to pixel space
             pixel_xyt = self.convert_local_to_pixel(local_path.numpy())
             # Plot
-            self.visualize_rgb_map(map_ax)
-            map_ax.scatter(pixel_xyt[:,0], pixel_xyt[:,1], color='r')
+            self.visualize_rgb_map(ax)
+            ax.scatter(pixel_xyt[:,0], pixel_xyt[:,1], color='r', s=1)
 
             plt.show()
 
@@ -419,12 +365,13 @@ class TerrainMap:
 
         pixel_xyt = self.convert_local_to_pixel(local_path.numpy())
 
-        for i in np.arange(crops.shape[0])[::3]:
+        for i in np.arange(crops.shape[0]):
             map_ax.clear()
             patch_ax.clear()
 
             self.visualize_rgb_map(map_ax)
-            map_ax.scatter(pixel_xyt[i,0], pixel_xyt[i,1], color='r')
+            map_ax.scatter(pixel_xyt[:,0], pixel_xyt[:,1], color='r', s=1) # plot whole traj
+            map_ax.scatter(pixel_xyt[i,0], pixel_xyt[i,1], color='b') # plot current odom
             
             img = crops[i].permute(1,2,0).numpy()[:,:,:3]
             patch_ax.imshow(img)
@@ -439,37 +386,26 @@ class TerrainMap:
 
 if __name__ == "__main__":
     
-    remake_traj_loaders = True # if false, loads trajloader object 
-    traj_all_path = '/home/cherie/Desktop/mateo-files/traj_all.obj'
-    traj_slice_path = '/home/cherie/Desktop/mateo-files/traj_slice.obj'
+    # remake_traj_loaders = True # if false, loads trajloader object 
 
     device = "gpu"
-    if remake_traj_loaders:
-        #  Directory with .pt files from rosbag_to_dataset
-        base_dir = '/home/cherie/Desktop/mateo-files/CostBags'
-        
+    #  Directory with .pt files from rosbag_to_dataset
+    base_dir = '/home/cherie/Desktop/mateo-files/CostBags'
+    
 
-        # Given directory of .pt files, make list of datasets (self.trajectories/self.trajectories_stamped)
-        hi1 = time.time()
-        tl = TrajLoader(base_dir, device) # Most time is spent here
-        print("hi1", time.time() - hi1)
-        hi2 = time.time()
-        traj = tl.getTrajectory()[0]
-        print("hi2", time.time() - hi2)
-        slicer = lambda x: x
-        traj_all = dict_map(traj, slicer) #! What is dict_map for?
+    # Given directory of .pt files, make list of datasets (self.trajectories/self.trajectories_stamped)
+    hi1 = time.time()
+    tl = TrajLoader(base_dir, device) # Most time is spent here
+    print("hi1", time.time() - hi1)
+    hi2 = time.time()
+    traj = tl.getTrajectory()[0]
+    print("hi2", time.time() - hi2)
+    slicer = lambda x: x
+    traj_all = dict_map(traj, slicer) #! What is dict_map for?
 
-        # For now, hardcode time index where map is fully populated.
-        slicer = lambda x: x[300:301]
-        traj_sliced = dict_map(traj, slicer)
-
-        # pickle.dump(traj_all, open(traj_all_path, 'wb'))
-        # pickle.dump(traj_sliced, open(traj_slice_path, 'wb'))
-
-    # else:
-    #     traj_all = pickle.load(open(traj_all_path, 'rb'))
-    #     traj_sliced = pickle.load(open(traj_slice_path, 'rb'))
-
+    # For now, hardcode time index where map is fully populated.
+    slicer = lambda x: x[300:301]
+    traj_sliced = dict_map(traj, slicer)
 
     # Constants on map size
     map_height = 10.0
@@ -514,5 +450,5 @@ if __name__ == "__main__":
     # tm.visualize_rgb_map()
     # tm.visualize_map_with_path(local_path, ax=None)
     tm.animate_map_crops_fpv(crops, costs, fpv_images, local_path)
-    
+
     # torch.save(crops, '/home/mateo/SARA/src/sara_ws/src/traversability_cost/scripts/crops.pt')
