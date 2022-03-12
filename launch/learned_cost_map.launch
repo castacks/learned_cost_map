@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+
+<launch>
+    <!-- <param name="/use_sim_time" value="true"/> -->
+
+    <!-- <node pkg="physics_atv_local_mapping" type="colorize_pcl_node.py" name="ColorizePclNode" output="screen" /> -->
+
+    <node pkg="learned_cost_map" type="learned_cost_map_node.py" name="learned_cost_map_node" output="screen" />    
+
+    <include file="$(find local_mapping)/traversability_cost.launch"/>
+
+
+</launch>
+
+
