@@ -47,8 +47,12 @@ def get_global_local_path(state, next_state):
 
 
 def get_local_path(state, next_state):
-    current_p = state[:,:3]
-    current_q = state[:,3:]
+    """Builds local path which starts at first state (position, yaw). 
+    Does this by querying difference between next-state and state, then accumulate.
+    This is helpful when we split into subtrajectories?
+    """
+    current_p = state[:,:3] # position
+    current_q = state[:,3:] # quaterion 
     current_yaw = quat_to_yaw(current_q)
     
     next_p = next_state[:,:3]
@@ -68,6 +72,7 @@ def get_local_path(state, next_state):
     yaw_local = torch.cumsum(dyaw, dim=0).view(-1,1)
     local_path = torch.cat((x_local, y_local, yaw_local), 1)
 
+    
 
     return local_path
 
@@ -274,19 +279,6 @@ class TerrainMap:
         return crops, cost, fpv_images, local_path
 
 
-        # END OF DEBUG
-
-        
-
-        
-        # Downsample path if downsample=True -> get indices
-        # Extract IMU data for these indices to evaluate cost
-        # Evaluate cost using IMU data
-        # Extract patches at these points on the path
-        # Return patches and labels
-
-        return crops, cost
-
     def get_rgb_map(self):
         return self.maps['rgb_map']
         
@@ -318,8 +310,8 @@ class TerrainMap:
         theta = local_path[:,2]
         pixel_x = (x/self.resolution.numpy()).astype(int)
         pixel_y = ((y - self.origin[1].numpy())/self.resolution.numpy()).astype(int)
-
-        return np.vstack((pixel_x, pixel_y, theta)).T
+        pixel_xyt = np.vstack((pixel_x, pixel_y, theta)).T
+        return pixel_xyt
 
     def visualize_rgb_map(self, ax=None):
         """Plot RGB Map. Assumes its first 3 dimensions of self.maps_tensor."""
@@ -358,7 +350,7 @@ class TerrainMap:
 
     def animate_map_crops_fpv(self, crops, costs, fpv_images, local_path):
         fig = plt.figure()
-        fig.suptitle('Cost visualizer')
+        fig.suptitle('Data visualizer')
         map_ax = fig.add_subplot(131)
         patch_ax = fig.add_subplot(132)
         fpv_ax = fig.add_subplot(133)
@@ -368,6 +360,7 @@ class TerrainMap:
         for i in np.arange(crops.shape[0]):
             map_ax.clear()
             patch_ax.clear()
+            fpv_ax.clear()
 
             self.visualize_rgb_map(map_ax)
             map_ax.scatter(pixel_xyt[:,0], pixel_xyt[:,1], color='r', s=1) # plot whole traj
@@ -404,8 +397,8 @@ if __name__ == "__main__":
     traj_all = dict_map(traj, slicer) #! What is dict_map for?
 
     # For now, hardcode time index where map is fully populated.
-    slicer = lambda x: x[300:301]
-    traj_sliced = dict_map(traj, slicer)
+    slicer = lambda x: x[0:1]
+    traj_sliced = dict_map(traj, slicer) 
 
     # Constants on map size
     map_height = 10.0
@@ -445,10 +438,59 @@ if __name__ == "__main__":
 
     # Get dataset {crops, cost}
     crops, costs, fpv_images, local_path = tm.get_labeled_crops(traj_all, crop_params)
+    pixel_xyt = tm.convert_local_to_pixel(local_path.numpy())
 
     # Visualizations
     # tm.visualize_rgb_map()
     # tm.visualize_map_with_path(local_path, ax=None)
-    tm.animate_map_crops_fpv(crops, costs, fpv_images, local_path)
+    # tm.animate_map_crops_fpv(crops, costs, fpv_images, local_path)
 
+    # Visualize Trajectory
+    fig = plt.figure()
+    fig.suptitle('Observation visualizer')
+    map_ax = fig.add_subplot(131)
+    rgb_map_ax = fig.add_subplot(132)
+    fpv_ax = fig.add_subplot(133)
+    rgb_map_lists = []
+    local_pose_lists = []
+    ts_list = []
+    for i in range(traj_all['observation']['rgb_map'].shape[0]):
+        map_ax.clear()
+        rgb_map_ax.clear()
+        fpv_ax.clear()
+
+        tm.visualize_rgb_map(map_ax)
+        map_ax.scatter(pixel_xyt[:,0], pixel_xyt[:,1], color='r', s=1) # plot whole traj
+        map_ax.scatter(pixel_xyt[i,0], pixel_xyt[i,1], color='b') # plot current odom
+        pixel_dx = np.cos(pixel_xyt[i,2])*20
+        pixel_dy = np.sin(pixel_xyt[i,2])*20
+        map_ax.arrow(pixel_xyt[i,0]-0.5*pixel_dx, pixel_xyt[i,1]-0.5*pixel_dy, pixel_dx, pixel_dy, color="blue", head_width=10)
+
+        rgb_map_inflate_permute = traj_all['observation']['rgb_map_inflate'][i].permute(0,2,1) # flipping x, y coord
+        rgb_map_inflate = rgb_map_inflate_permute.permute(1,2,0).numpy()[:,:,:3]
+        rgb_map_ax.imshow(rgb_map_inflate)
+        fpv_ax.imshow(traj_all['observation']['image_rgb'][i,:3].permute(1,2,0).numpy())
+        rgb_map_ax.set_title(i)
+        plt.pause(0.01)
+
+        cur_pixel = pixel_xyt[i,:]
+        if i==0:
+            plt.pause(1)
+            local_pose_lists.append(cur_pixel)
+            rgb_map_lists.append(rgb_map_inflate)
+            ts_list.append(i)
+        if i==50:
+            local_pose_lists.append(cur_pixel)
+            rgb_map_lists.append(rgb_map_inflate)
+            ts_list.append(i)
+            print(cur_pixel)
+        if i == 100:
+            local_pose_lists.append(cur_pixel)
+            rgb_map_lists.append(rgb_map_inflate)
+            ts_list.append(i)
+            print(cur_pixel)
+
+            np.save("rgb_map_list", rgb_map_lists)
+            np.save("local_pose_list", local_pose_lists)
+            np.save("ts_list", ts_list)
     # torch.save(crops, '/home/mateo/SARA/src/sara_ws/src/traversability_cost/scripts/crops.pt')
