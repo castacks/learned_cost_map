@@ -460,8 +460,8 @@ if __name__ == "__main__":
         fpv_ax.clear()
 
         tm.visualize_rgb_map(map_ax)
-        map_ax.scatter(pixel_xyt[:,0], pixel_xyt[:,1], color='r', s=1) # plot whole traj
-        map_ax.scatter(pixel_xyt[i,0], pixel_xyt[i,1], color='b') # plot current odom
+        map_ax.scatter(pixel_xyt[:80,0], pixel_xyt[:80,1], color='r', s=1) # plot whole traj
+        # map_ax.scatter(pixel_xyt[i,0], pixel_xyt[i,1], color='b') # plot current odom
         pixel_dx = np.cos(pixel_xyt[i,2])*20
         pixel_dy = np.sin(pixel_xyt[i,2])*20
         map_ax.arrow(pixel_xyt[i,0]-0.5*pixel_dx, pixel_xyt[i,1]-0.5*pixel_dy, pixel_dx, pixel_dy, color="blue", head_width=10)
@@ -473,24 +473,19 @@ if __name__ == "__main__":
         rgb_map_ax.set_title(i)
         plt.pause(0.01)
 
-        cur_pixel = pixel_xyt[i,:]
+        cur_pixel = local_path[i,:].numpy()
         if i==0:
-            plt.pause(1)
+            plt.pause(5)
             local_pose_lists.append(cur_pixel)
             rgb_map_lists.append(rgb_map_inflate)
             ts_list.append(i)
-        if i==50:
-            local_pose_lists.append(cur_pixel)
-            rgb_map_lists.append(rgb_map_inflate)
-            ts_list.append(i)
-            print(cur_pixel)
-        if i == 100:
-            local_pose_lists.append(cur_pixel)
-            rgb_map_lists.append(rgb_map_inflate)
-            ts_list.append(i)
-            print(cur_pixel)
+        # if i == 40 or i == 50 or i==60 or i==100 or i==80 or i==150 or i==180:
+        local_pose_lists.append(cur_pixel)
+        rgb_map_lists.append(rgb_map_inflate)
+        ts_list.append(i)
+        print(cur_pixel)
 
-            np.save("rgb_map_list", rgb_map_lists)
-            np.save("local_pose_list", local_pose_lists)
-            np.save("ts_list", ts_list)
+        np.save("rgb_map_list", rgb_map_lists)
+        np.save("local_pose_list", local_pose_lists)
+        np.save("ts_list", ts_list)
     # torch.save(crops, '/home/mateo/SARA/src/sara_ws/src/traversability_cost/scripts/crops.pt')
