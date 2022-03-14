@@ -1,3 +1,5 @@
+from lib2to3.pytree import convert
+from turtle import left, right
 from matplotlib import pyplot as plt 
 import numpy as np
 np.set_printoptions(suppress=True)
@@ -18,6 +20,18 @@ def convert_local_to_pixel(local_path):
     pixel_x = (x/resolution).astype(int)
     pixel_y = ((y - origin[1])/resolution).astype(int)
     pixel_xyt = np.vstack((pixel_x, pixel_y, theta)).T
+    return pixel_xyt
+
+def convert_local_to_grid(local_path, origin):
+    """Convert local_path to pixel space.
+    Local_path: N x 2 numpy array (x, y)
+    Output: Nx2 Numpy array
+    """
+    x = local_path[:,0]
+    y = local_path[:,1]
+    pixel_x = ((x - origin[0])/resolution).astype(int)
+    pixel_y = ((y - origin[1])/resolution).astype(int)
+    pixel_xyt = np.vstack((pixel_x, pixel_y)).T
     return pixel_xyt
 
 def convert_grid_to_local(grid_x, grid_y, odom_x, odom_y, odom_theta):
@@ -54,35 +68,89 @@ def add_border(image, border_width):
 
 origin = [0,-5]
 resolution = 0.05
-height = 10/resolution
-width = 10/resolution
+height_m = 10
+width_m = 10
+height = height_m/resolution
+width = width_m/resolution
 xmin = origin[0]
 xmax = origin[0] + width
 ymin = origin[1]
 ymax = origin[1] + height
 
 print("NUM MAPS: ", maps.shape)
-for ind in range(maps.shape[0])[::10]:
+# for ind in range(maps.shape[0])[::10]:
+combined_coord = np.zeros((0,2))
+combined_grid_color = np.zeros((0,3))
+for ind in [0,50, 100, 125, 150][:4]:
 # ind = 1
     map = add_border(maps[ind],0)
     odom = local_odoms[ind]
     grid_x, grid_y = np.meshgrid(np.arange(width), np.arange(height))
-    grid_x = grid_x.flatten().astype(int)[::2] 
-    grid_y = grid_y.flatten().astype(int)[::2]
+    grid_x = grid_x.flatten().astype(int)#[::] 
+    grid_y = grid_y.flatten().astype(int)#[::2]
     grid_color = map[grid_x, grid_y]
     local_coord = convert_grid_to_local(grid_x, grid_y, odom[0], odom[1], odom[2])
-    print(local_coord.shape)
-    plt.scatter(local_coord[:,0], local_coord[:,1], c=grid_color, alpha=0.2) # plot local map
+    # print(local_coord.shape)
+    # plt.scatter(local_coord[:,0], local_coord[:,1], c=grid_color, alpha=1) # plot local map
+    combined_coord = np.vstack((combined_coord, local_coord))
+    combined_grid_color = np.vstack((combined_grid_color, grid_color))
+    # print(combined_coord.shape)
+    # plt.scatter(local_coord[:,0], local_coord[:,1], c=grid_color, alpha=1)
     # print(convert_grid_to_local(100,0, odom[0], odom[1], 0))
-    plt.xlabel("x")
-    plt.ylabel('y')
-    plt.axis('equal')
 
-    plt.scatter(local_odoms[:,0], local_odoms[:,1])
-    plt.scatter(odom[0], odom[1], c='r', alpha=1) # current odometry
-    pixel_dx = np.cos(odom[2])*1
-    pixel_dy = np.sin(odom[2])*1
-    plt.arrow(odom[0]-0.5*pixel_dx, odom[1]-0.5*pixel_dy, pixel_dx, pixel_dy, color="blue", head_width=0.2)
+    # plt.scatter(local_odoms[:,0], local_odoms[:,1]) # all odometries
+    # plt.scatter(odom[0], odom[1], c='r', alpha=1) # current odometry
+    # pixel_dx = np.cos(odom[2])*1
+    # pixel_dy = np.sin(odom[2])*1
+    # plt.arrow(odom[0]-0.5*pixel_dx, odom[1]-0.5*pixel_dy, pixel_dx, pixel_dy, color="blue", head_width=0.2)
+
+
+# Visualize: Plot local map (metric)
+# plt.xlabel("x")
+# plt.ylabel('y')
+# plt.axis('equal')
+# plt.scatter(combined_coord[:,0], combined_coord[:,1], c=combined_grid_color, alpha=1) 
+# plt.show()
+
+# Convert combined metric map to grid. Find basic metadata for combined grid map.  
+
+leftmost_x_m = np.min(combined_coord[:,0])
+rightmost_x_m = np.max(combined_coord[:,0])
+topmost_x_m = np.max(combined_coord[:,1])
+botmost_x_m = np.min(combined_coord[:,1])
+
+orig_leftmost_x_m = 0
+orig_rightmost_x_m = width_m + origin[0] # or height
+orig_topmost_x_m = height_m + origin[1] # or width
+orig_botmost_x_m = 0
+
+print(leftmost_x_m, rightmost_x_m, topmost_x_m, botmost_x_m)
+combined_width = rightmost_x_m - leftmost_x_m
+combined_width_grid = np.ceil(combined_width/resolution).astype(int)
+combined_height = topmost_x_m - botmost_x_m
+combined_height_grid = np.ceil(combined_height/resolution).astype(int)
+# print(combined_width_pix, combined_height_pix)
+
+origin_shift_x_m = leftmost_x_m - orig_leftmost_x_m
+origin_shift_y_m = topmost_x_m - orig_topmost_x_m
+print("corners", leftmost_x_m, rightmost_x_m, topmost_x_m, botmost_x_m)
+print("Origin shift grid", origin_shift_x_m, origin_shift_y_m)
+
+new_map_local = np.zeros((combined_width_grid, combined_height_grid, 3))
+grid_x, grid_y = np.meshgrid(np.arange(combined_width_grid), np.arange(combined_height_grid))
+grid_x = grid_x.flatten().astype(int)
+grid_y = grid_y.flatten().astype(int)
+
+# for every point in new local map, we want an associated color (if there's nothing nearby, assign 0)
+new_origin = [leftmost_x_m, botmost_x_m] #! TODO: programmatically calculate new origin
+# import pdb; pdb.set_trace()
+new_grid_coords = convert_local_to_grid(combined_coord, new_origin) # TODO: this should be replaced to new grid metadata
+print("new map size", new_map_local.shape)
+print("max new grid", np.max(new_grid_coords[:,0]), np.max(new_grid_coords[:,1]))
+print("combined shape", combined_grid_color.shape, combined_coord.shape)
+new_map_local[new_grid_coords[:,0], new_grid_coords[:,1]] = combined_grid_color
+
+plt.imshow(new_map_local)
 
 plt.show()
 
@@ -108,40 +176,3 @@ plt.show()
 # print(odoms[1,:])
 
 
-
-# def merge_images(file1, file2):
-#     """Merge two images into one, displayed side by side
-#     :param file1: path to first image file
-#     :param file2: path to second image file
-#     :return: the merged Image object
-#     """
-#     image1 = Image.fromarray(np.uint8(file1*255)).convert('RGB')
-#     image2 = Image.fromarray(np.uint8(file2*255)).convert('RGB')
-
-#     (width1, height1) = image1.size
-#     (width2, height2) = image2.size
-
-#     result_width = width1 + width2
-#     result_height = max(height1, height2)
-
-#     result = Image.new('RGB', (result_width, result_height))
-#     result.paste(im=image1, box=(0, 0))
-#     result.paste(im=image2, box=(new_x, new_y))
-#     return result
-# # Left image
-# # height, width, _ = maps[0].shape
-# # left_corners = np.array([0,0,1], [0,height,1])
-
-# # corner1 = 0#int(new_x-int(maps_size[0]/2))
-# # corner2 = int(new_x+int(maps_size[0]/2))
-# # corner3 = 0# int(new_y-int(maps_size[1]/2))
-# # corner4 = int(new_y+maps_size[1]/2)
-# # print(corner1, corner2, corner3, corner4)
-# # maps[0][corner1:corner2, corner3:corner4] = maps[1,:165, :198]
-# # plt.imshow(maps[0])
-# # plt.title("Stitched")
-# # plt.subplot(133)
-# # plt.imshow(add_border(maps[0],3))
-# merged = merge_images(add_border(maps[0],3), add_border(maps[1],3))
-# plt.imshow(merged)
-# plt.show()
