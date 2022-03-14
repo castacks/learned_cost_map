@@ -81,7 +81,7 @@ print("NUM MAPS: ", maps.shape)
 # for ind in range(maps.shape[0])[::10]:
 combined_coord = np.zeros((0,2))
 combined_grid_color = np.zeros((0,3))
-for ind in [0,50, 100, 125, 150, 175, 200, 250, 300]:
+for ind in [0,50,75,90, 100, 110, 125, 150, 175, 200, 225, 250, 300]:
 # ind = 1
     map = add_border(maps[ind],0)
     odom = local_odoms[ind]
@@ -143,6 +143,7 @@ grid_y = grid_y.flatten().astype(int)
 
 # for every point in new local map, we want an associated color (if there's nothing nearby, assign 0)
 new_origin = [leftmost_x_m, botmost_x_m] 
+print("NEW ORIGIN", new_origin)
 new_grid_coords = convert_local_to_grid(combined_coord, new_origin) # TODO: this should be replaced to new grid metadata
 print("new map size", new_map_local.shape)
 print("max new grid", np.max(new_grid_coords[:,0]), np.max(new_grid_coords[:,1]))
@@ -156,6 +157,8 @@ new_odom_grid = convert_local_to_grid(local_odoms, new_origin)
 plt.scatter(new_odom_grid[:,1], new_odom_grid[:,0]) # all odometries
 
 plt.show()
+
+np.save('combined_map.npy', new_map_local)
 
 # maps_size = maps[0].shape
 

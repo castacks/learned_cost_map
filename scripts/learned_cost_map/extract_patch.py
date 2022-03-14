@@ -36,11 +36,15 @@ class PatchTransform:
             - x:
                 Torch image of size NxCxHxW   
         '''
-        width = x.shape[-1]
-        height = x.shape[-2]
+        width = x.shape[-2]
+        height = x.shape[-1]
 
         # First, translate to make the position of the robot the center of the image
-        translation = [round(height/2)-self.position[0], round(width/2)-self.position[1]]
+        rotated_x = np.cos(self.yaw) * 125 # TODO: comment
+        rotated_y = np.sin(self.yaw) * 125
+        translation = [round(height/2)-self.position[0]-rotated_x, round(width/2)-self.position[1]-rotated_y]
+        # print("Translation", translation)
+        # print("Width, height", width, height)
 
         output = TF.affine(x, angle=0.0, translate=translation, scale=1.0, shear=0.0)
 
