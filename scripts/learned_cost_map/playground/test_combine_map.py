@@ -29,8 +29,8 @@ def convert_local_to_grid(local_path, origin):
     """
     x = local_path[:,0]
     y = local_path[:,1]
-    pixel_x = ((x - origin[0])/resolution).astype(int)
-    pixel_y = ((y - origin[1])/resolution).astype(int)
+    pixel_y = ((x - origin[0])/resolution).astype(int)
+    pixel_x = ((y - origin[1])/resolution).astype(int)
     pixel_xyt = np.vstack((pixel_x, pixel_y)).T
     return pixel_xyt
 
@@ -81,7 +81,7 @@ print("NUM MAPS: ", maps.shape)
 # for ind in range(maps.shape[0])[::10]:
 combined_coord = np.zeros((0,2))
 combined_grid_color = np.zeros((0,3))
-for ind in [0,50, 100, 125, 150][:4]:
+for ind in [0,50, 100, 125, 150, 175, 200, 250, 300]:
 # ind = 1
     map = add_border(maps[ind],0)
     odom = local_odoms[ind]
@@ -136,14 +136,13 @@ origin_shift_y_m = topmost_x_m - orig_topmost_x_m
 print("corners", leftmost_x_m, rightmost_x_m, topmost_x_m, botmost_x_m)
 print("Origin shift grid", origin_shift_x_m, origin_shift_y_m)
 
-new_map_local = np.zeros((combined_width_grid, combined_height_grid, 3))
-grid_x, grid_y = np.meshgrid(np.arange(combined_width_grid), np.arange(combined_height_grid))
+new_map_local = np.zeros((combined_height_grid, combined_width_grid, 3))
+grid_x, grid_y = np.meshgrid(np.arange(combined_height_grid), np.arange(combined_width_grid))
 grid_x = grid_x.flatten().astype(int)
 grid_y = grid_y.flatten().astype(int)
 
 # for every point in new local map, we want an associated color (if there's nothing nearby, assign 0)
-new_origin = [leftmost_x_m, botmost_x_m] #! TODO: programmatically calculate new origin
-# import pdb; pdb.set_trace()
+new_origin = [leftmost_x_m, botmost_x_m] 
 new_grid_coords = convert_local_to_grid(combined_coord, new_origin) # TODO: this should be replaced to new grid metadata
 print("new map size", new_map_local.shape)
 print("max new grid", np.max(new_grid_coords[:,0]), np.max(new_grid_coords[:,1]))
@@ -151,6 +150,10 @@ print("combined shape", combined_grid_color.shape, combined_coord.shape)
 new_map_local[new_grid_coords[:,0], new_grid_coords[:,1]] = combined_grid_color
 
 plt.imshow(new_map_local)
+
+# overlay trajectory
+new_odom_grid = convert_local_to_grid(local_odoms, new_origin)
+plt.scatter(new_odom_grid[:,1], new_odom_grid[:,0]) # all odometries
 
 plt.show()
 
