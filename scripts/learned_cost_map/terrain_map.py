@@ -2,15 +2,14 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-import pickle
-import time
-# from learned_cost_map.path_transform import TrajLoader, PathTransform
-# from learned_cost_map.extract_patch import PatchTransform
-# from learned_cost_map.util import dict_to, quat_to_yaw, dict_map
 
-from path_transform import TrajLoader, PathTransform
-from extract_patch import PatchTransform
-from util import dict_to, quat_to_yaw, dict_map
+from learned_cost_map.path_transform import TrajLoader, PathTransform
+from learned_cost_map.extract_patch import PatchTransform
+from learned_cost_map.util import dict_to, quat_to_yaw, dict_map
+
+# from path_transform import TrajLoader, PathTransform
+# from extract_patch import PatchTransform
+# from util import dict_to, quat_to_yaw, dict_map
 
 
 def get_global_local_path(state, next_state):
@@ -47,12 +46,8 @@ def get_global_local_path(state, next_state):
 
 
 def get_local_path(state, next_state):
-    """Builds local path which starts at first state (position, yaw). 
-    Does this by querying difference between next-state and state, then accumulate.
-    This is helpful when we split into subtrajectories?
-    """
-    current_p = state[:,:3] # position
-    current_q = state[:,3:] # quaterion 
+    current_p = state[:,:3]
+    current_q = state[:,3:]
     current_yaw = quat_to_yaw(current_q)
     
     next_p = next_state[:,:3]
@@ -72,7 +67,6 @@ def get_local_path(state, next_state):
     yaw_local = torch.cumsum(dyaw, dim=0).view(-1,1)
     local_path = torch.cat((x_local, y_local, yaw_local), 1)
 
-    
 
     return local_path
 
@@ -95,8 +89,7 @@ class TerrainMap:
         self.map_metadata = dict_to(self.map_metadata, self.device)
         self.maps = dict_to(self.maps, self.device)
 
-        # self.maps_tensor = torch.cat([self.maps['rgb_map'], self.maps['height_map_low'], self.maps['height_map_high']], dim=0)
-        self.maps_tensor = torch.cat([self.maps['rgb_map']], dim=0)
+        self.maps_tensor = torch.cat([self.maps['rgb_map'], self.maps['height_map_low'], self.maps['height_map_high']], dim=0)
 
         self.num_channels = self.maps_tensor.shape[0]
 
@@ -123,12 +116,11 @@ class TerrainMap:
         '''
 
         crop_size = [int(c/self.resolution) for c in crop_params['crop_size']]
-        # print(self.origin)
+
         p_x = int((pose[0] - self.origin[0])/self.resolution)
         p_y = int((pose[1] - self.origin[1])/self.resolution)
         position = [p_x, p_y]
         yaw = pose[2].item()
-        # print("position", position)
 
         getPatch = PatchTransform(position, yaw, crop_size, crop_params['output_size'], on_top=True)
 
@@ -159,7 +151,6 @@ class TerrainMap:
         crops = []
 
         for i in range(path.shape[0]):
-            # print("Local to pixel", self.convert_local_to_pixel(np.atleast_2d(path[i,:])))
             pose = path[i,:]
             crops.append(self.get_crop(pose, crop_params).view(1, self.num_channels, *crop_params['output_size']))
 
@@ -273,14 +264,79 @@ class TerrainMap:
 
         cost = trajectory['observation']['traversability_cost']
         local_path = get_local_path(state, next_state)
-        
+   
+
         # Convert metric coordinates to pixel coordinates to be sampled
         crops = self.get_crop_path(local_path, crop_params)
-        fpv_images = trajectory['observation']['image_rgb']
-        heightmap = trajectory['observation']['heightmap_high']
 
-        return crops, cost, fpv_images, heightmap, local_path
 
+        return crops, cost
+
+
+        # DEBUG
+        print(f"Crops shape: {crops.shape}")
+
+        original = tm.maps_tensor.permute(1,2,0).numpy()[:,:,:3]
+        fig = plt.figure()
+        fig.suptitle('Cost visualizer')
+        img_viewer = fig.add_subplot(121)
+        patch_viewer = fig.add_subplot(122)
+
+        for i in range(crops.shape[0]):
+            img = crops[i].permute(1,2,0).numpy()[:,:,:3]
+
+            img_viewer.clear()
+            patch_viewer.clear()
+
+            x = local_path[i,0]
+            y = local_path[i,1]
+            theta = local_path[i,2]
+            theta_deg = theta*180/np.pi
+            pixel_x = int((x/self.resolution))
+            pixel_y = int((y - self.origin[1])/self.resolution)
+
+            pixel_dx = int(crop_width/self.resolution)*np.cos(theta)
+            pixel_dy = int(crop_width/self.resolution)*np.sin(theta)
+
+            img_viewer.plot(pixel_x, pixel_y, marker='o', color='red')
+            
+            img_viewer.arrow(pixel_x-0.5*pixel_dx, pixel_y-0.5*pixel_dy, pixel_dx, pixel_dy, color="red")
+
+            pixel_crop_width = int(crop_width/self.resolution)
+            corners = 0.5 * np.array([[pixel_crop_width, pixel_crop_width],
+                                      [pixel_crop_width, -pixel_crop_width], [-pixel_crop_width, -pixel_crop_width], [-pixel_crop_width, pixel_crop_width], [pixel_crop_width, pixel_crop_width]])
+            rot = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+            print(f"Original corners: {corners}")
+            print(f"Corners expanded dims: {np.expand_dims(corners, axis=2)}")
+            print(f"square matmul: {np.matmul(rot, np.expand_dims(corners, axis=2)).shape}")
+            square = np.matmul(rot, np.expand_dims(corners, axis=2))[:, :, 0] + np.array([pixel_x, pixel_y])
+            img_viewer.plot(square[:, 0], square[:, 1], c='r')
+
+            img_viewer.set_title(f"Current pose: x={pixel_x} y={pixel_y}, yaw={(theta_deg%360.):.2f}")
+            img_viewer.set_xlabel("X axis")
+            img_viewer.set_ylabel("Y axis")
+            img_viewer.imshow(original, origin="lower")
+            
+
+            patch_viewer.imshow(img)
+            patch_viewer.set_title(f"Looking at patch {i}/{crops.shape[0]}. Cost: {cost[i]:.4f}")
+            plt.pause(0.01)
+            if i == 0:
+                plt.pause(15)
+
+
+        # END OF DEBUG
+
+        
+
+        
+        # Downsample path if downsample=True -> get indices
+        # Extract IMU data for these indices to evaluate cost
+        # Evaluate cost using IMU data
+        # Extract patches at these points on the path
+        # Return patches and labels
+
+        return crops, cost
 
     def get_rgb_map(self):
         return self.maps['rgb_map']
@@ -303,158 +359,43 @@ class TerrainMap:
         'height_map_high': torch.zeros(3, 200, 200)
     }
 
-    def convert_local_to_pixel(self, local_path):
-        """Convert local_path to pixel space.
-        Local_path: N x 3 numpy array (x, y, theta)
-        Output: Nx3 Numpy array
-        """
-        x = local_path[:,0]
-        y = local_path[:,1]
-        theta = local_path[:,2]
-        pixel_x = ((x - self.origin[0].numpy())/self.resolution.numpy()).astype(int)
-        pixel_y = ((y - self.origin[1].numpy())/self.resolution.numpy()).astype(int)
-        pixel_xyt = np.vstack((pixel_x, pixel_y, theta)).T
-        return pixel_xyt
-
-    def visualize_rgb_map(self, ax=None):
-        """Plot RGB Map. Assumes its first 3 dimensions of self.maps_tensor."""
-        rgb_map = self.maps_tensor.permute(1,2,0).numpy()[:,:,:3] # get rgb map
-        if ax is None: # make a new figure
-            plt.figure()
-            plt.imshow(rgb_map, origin="lower")
-        else:
-            # print("AX IS NOT NONE, not implemented")
-            ax.imshow(rgb_map, origin="lower")
-            ax.set_xlabel("X axis")
-            ax.set_ylabel("Y axis")
-
-        
-        if ax is None:
-            plt.show()
-
-    def visualize_map_with_path(self, local_path, ax=None):
-        """Visualize map overlaid with local path."""
-
-        # TODO: add animate ON
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            
-            # Convert from local space to pixel space
-            pixel_xyt = self.convert_local_to_pixel(local_path.numpy())
-            # Plot
-            self.visualize_rgb_map(ax)
-            ax.scatter(pixel_xyt[:,0], pixel_xyt[:,1], color='r', s=1)
-
-            plt.show()
-
-        else:
-            print("AX IS NOT NONE, not implemented")        
-
-    def animate_map_crops_fpv(self, crops, costs, fpv_images, local_path, heightmaps):
-        fig = plt.figure()
-        fig.suptitle('Global Map Playground')
-        map_ax = fig.add_subplot(141)
-        patch_ax = fig.add_subplot(144)
-        fpv_ax = fig.add_subplot(142)
-        hm_ax = fig.add_subplot(143)
-
-        pixel_xyt = self.convert_local_to_pixel(local_path.numpy())
-
-        for i in np.arange(crops.shape[0]):
-            map_ax.clear()
-            patch_ax.clear()
-            fpv_ax.clear()
-            hm_ax.clear()
-
-            self.visualize_rgb_map(map_ax)
-            map_ax.scatter(pixel_xyt[:,0], pixel_xyt[:,1], color='b', s=1) # plot whole traj
-            map_ax.scatter(pixel_xyt[i,0], pixel_xyt[i,1], color='r') # plot current odom
-            arrow_size = 10/resolution
-            pixel_dx = np.cos(pixel_xyt[i,2])*arrow_size
-            pixel_dy = np.sin(pixel_xyt[i,2])*arrow_size
-            map_ax.arrow(pixel_xyt[i,0], pixel_xyt[i,1], pixel_dx, pixel_dy, color="red", head_width=10)
-            map_ax.arrow(pixel_xyt[i,0], pixel_xyt[i,1], pixel_dx, pixel_dy, color="red", width = arrow_size, fill=False, head_width=0)
-            map_ax.set_title("Global Map + Traj")
-
-            img = crops[i].permute(2,1,0).numpy()[:,:,:3]
-            patch_ax.imshow(img)
-            # patch_ax.set_title(f"Looking at patch {i}/{crops.shape[0]}. \n Cost: {costs[i]:.4f}")
-            patch_ax.set_title("GT: Cropped Global Map \n after accumulation \n TODO: Replace w/ near-range cost")
-
-            heightimg = heightmaps[i].permute(1,2,0).numpy()[:,:,0]
-            hm_ax.imshow(heightimg)
-            hm_ax.set_title("In: Local Height Map")
-
-            fpv_ax.imshow(fpv_images[i,:3].permute(1,2,0).numpy())
-            fpv_ax.set_title("In: Image")
-
-            plt.pause(0.01)
-            if i==0:
-                plt.pause(10)        
-
 
 if __name__ == "__main__":
-    
-    # remake_traj_loaders = True # if false, loads trajloader object 
-
+    base_dir = '/home/mateo/Data/SARA/CostBags'
     device = "gpu"
-    #  Directory with .pt files from rosbag_to_dataset
-    base_dir = '/home/cherie/Desktop/mateo-files/CostBags'
-    
 
-    # Given directory of .pt files, make list of datasets (self.trajectories/self.trajectories_stamped)
-    hi1 = time.time()
-    tl = TrajLoader(base_dir, device) # Most time is spent here
-    print("hi1", time.time() - hi1)
-    hi2 = time.time()
+    tl = TrajLoader(base_dir, device)
     traj = tl.getTrajectory()[0]
-    print("hi2", time.time() - hi2)
-    slicer = lambda x: x
-    traj_all = dict_map(traj, slicer) #! What is dict_map for?
 
-    # For now, hardcode time index where map is fully populated.
-    slicer = lambda x: x[0:1]
-    traj_sliced = dict_map(traj, slicer) 
+    slicer = lambda x: x[300:301]
+    traj = dict_map(traj, slicer)
 
-    # Constants on map size
+
     map_height = 10.0
     map_width = 10.0
     resolution = 0.05
 
-    crop_width = 10  # in meters
+    crop_width = 2  # in meters
     crop_size = [crop_width, crop_width]
     output_size = [224, 224]
 
-    # Instantiate Terrain Map, seems like it can handle multiple maps
-
-    # Get maps to make TerrainMap object (all seems to be completed map), which data collection is operated over
     # NOTE: Permutation step is really important to have x and y coordinates in the right coordinate frame
+    rgb_map = traj['observation']['rgb_map_inflate'][0].permute(0,2,1)
+    height_map_low = traj['observation']['heightmap_low'][0].permute(0,2,1)
+    height_map_high = traj['observation']['heightmap_high'][0].permute(0,2,1)
 
-    # height_map_low = traj_sliced['observation']['heightmap_low'][0].permute(0,2,1)
-    # height_map_high = traj_sliced['observation']['heightmap_high'][0].permute(0,2,1)
-    rgb_map = traj_sliced['observation']['rgb_map_inflate'][0].permute(0,2,1)
-    print("before", rgb_map.shape)
 
-    rgb_map = np.transpose(np.load("combined_map.npy"),(2,0,1))
-    print("after", rgb_map.shape)
-
-    # plt.imshow(rgb_map)
-    # plt.show()
-    new_origin = [-3.93, -31.44]
     map_metadata = {
         'height': map_height,
         'width': map_width,
-        'resolution': resolution,
-        'origin': new_origin,
+        'resolution': resolution
     }
 
     maps = {
-        'rgb_map': rgb_map
-        # ,
-        # 'height_map_low': height_map_low,
-        # 'height_map_high':height_map_high
-    } 
+        'rgb_map': rgb_map,
+        'height_map_low': height_map_low,
+        'height_map_high':height_map_high
+    }
 
     crop_params ={
         'crop_size': crop_size,
@@ -462,57 +403,23 @@ if __name__ == "__main__":
     }
 
     tm = TerrainMap(map_metadata=map_metadata, maps=maps)
+    
+    poses = torch.Tensor([[1., 1., 0.],
+        [1., 2., 0.],
+        [1., 3., 0.]])
 
-    # Get dataset {crops, cost}
-    crops, costs, fpv_images, heightmaps, local_path = tm.get_labeled_crops(traj_all, crop_params)
-    pixel_xyt = tm.convert_local_to_pixel(local_path.numpy())
+    poses = torch.Tensor([[1., 1., 0.]])
 
-    # Visualizations
-    # tm.visualize_rgb_map()
-    # tm.visualize_map_with_path(local_path, ax=None)
-    tm.animate_map_crops_fpv(crops, costs, fpv_images, local_path, heightmaps)
 
-    # Visualize Trajectory
-    # fig = plt.figure()
-    # fig.suptitle('Observation visualizer')
-    # map_ax = fig.add_subplot(131)
-    # rgb_map_ax = fig.add_subplot(132)
-    # fpv_ax = fig.add_subplot(133)
-    # rgb_map_lists = []
-    # local_pose_lists = []
-    # ts_list = []
-    # for i in range(traj_all['observation']['rgb_map'].shape[0]):
-    #     map_ax.clear()
-    #     rgb_map_ax.clear()
-    #     fpv_ax.clear()
+    # crops = tm.get_crop_batch(poses, crop_params)
 
-    #     tm.visualize_rgb_map(map_ax)
-    #     map_ax.scatter(pixel_xyt[:80,0], pixel_xyt[:80,1], color='r', s=1) # plot whole traj
-    #     # map_ax.scatter(pixel_xyt[i,0], pixel_xyt[i,1], color='b') # plot current odom
-    #     pixel_dx = np.cos(pixel_xyt[i,2])*20
-    #     pixel_dy = np.sin(pixel_xyt[i,2])*20
-    #     map_ax.arrow(pixel_xyt[i,0]-0.5*pixel_dx, pixel_xyt[i,1]-0.5*pixel_dy, pixel_dx, pixel_dy, color="blue", head_width=10)
+    crops, cost = tm.get_labeled_crops(traj, crop_params)
+    # crops = tm.get_crop_path(traj, crop_params)
 
-    #     rgb_map_inflate_permute = traj_all['observation']['rgb_map_inflate'][i].permute(0,2,1) # flipping x, y coord
-    #     rgb_map_inflate = rgb_map_inflate_permute.permute(1,2,0).numpy()[:,:,:3]
-    #     rgb_map_ax.imshow(rgb_map_inflate)
-    #     fpv_ax.imshow(traj_all['observation']['image_rgb'][i,:3].permute(1,2,0).numpy())
-    #     rgb_map_ax.set_title(i)
-    #     plt.pause(0.01)
+    print(f"crops shape: {crops.shape}")
+    print(f"cost shape: {cost.shape}")
 
-    #     cur_pixel = local_path[i,:].numpy()
-    #     if i==0:
-    #         plt.pause(5)
-    #         local_pose_lists.append(cur_pixel)
-    #         rgb_map_lists.append(rgb_map_inflate)
-    #         ts_list.append(i)
-    #     # if i == 40 or i == 50 or i==60 or i==100 or i==80 or i==150 or i==180:
-    #     local_pose_lists.append(cur_pixel)
-    #     rgb_map_lists.append(rgb_map_inflate)
-    #     ts_list.append(i)
-    #     print(cur_pixel)
+    plt.imshow(crops[0,:3].permute(1,2,0).numpy())
+    plt.show()
 
-    #     np.save("rgb_map_list", rgb_map_lists)
-    #     np.save("local_pose_list", local_pose_lists)
-    #     np.save("ts_list", ts_list)
     # torch.save(crops, '/home/mateo/SARA/src/sara_ws/src/traversability_cost/scripts/crops.pt')

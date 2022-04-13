@@ -6,8 +6,8 @@ from os import path
 from functools import reduce
 
 
-# from learned_cost_map.util import dict_map
-from util import dict_map
+from learned_cost_map.util import dict_map
+# from util import dict_map
 
 def quat_to_yaw(quat):
     """
@@ -40,7 +40,7 @@ class TrajLoader:
         
         # print(self.trajectories_stamped[0])
 
-        # print("self.trajectories: ", self.trajectories[0]["observation"].keys())
+        # print("self.trajectories: ")
         # print(self.trajectories_stamped[0]['dt'])
     def timestampTraj(self, traj):
         '''
