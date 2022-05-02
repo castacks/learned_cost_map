@@ -1,0 +1,24 @@
+{
+    "os": "Linux-5.13.0-40-generic-x86_64-with-glibc2.29",
+    "python": "3.8.10",
+    "heartbeatAt": "2022-04-26T13:41:34.161995",
+    "startedAt": "2022-04-26T13:41:33.230592",
+    "docker": null,
+    "gpu": "NVIDIA GeForce RTX 3080 Ti",
+    "gpu_count": 1,
+    "cpu_count": 24,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "train.py",
+    "codePath": "scripts/learned_cost_map/trainer/train.py",
+    "git": {
+        "remote": "git@github.com:castacks/learned_cost_map.git",
+        "commit": "b0723e294b2b2573dfb71253eeecb8aaddbca08c"
+    },
+    "email": "mguamanc@andrew.cmu.edu",
+    "root": "/home/mateo/learned_cost_map",
+    "host": "mateo",
+    "username": "mateo",
+    "executable": "/usr/bin/python"
+}

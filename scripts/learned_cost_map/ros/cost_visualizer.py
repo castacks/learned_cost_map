@@ -4,6 +4,14 @@ from std_msgs.msg import Float32
 from sensor_msgs.msg import Imu
 import numpy as np
 
+import scipy
+import scipy.signal
+from scipy.signal import welch
+from scipy.integrate import simps
+
+import os
+import yaml
+
 
 class Buffer:
     '''Maintains a scrolling buffer to maintain a window of data in memory
@@ -94,7 +102,7 @@ def bandpower(data, sf, band, window_sec=None, relative=False):
         bp /= simps(psd, dx=freq_res)
     return bp
 
-def cost_function(data, sensor_freq, cost_name, cost_stats, range=None, num_bins=None):
+def cost_function(data, sensor_freq, cost_name, cost_stats, freq_range=None, num_bins=None):
     '''Average bandpower in bins of 10 Hz in z axis
 
     Args:
@@ -107,6 +115,7 @@ def cost_function(data, sensor_freq, cost_name, cost_stats, range=None, num_bins
     '''
     cost = 1000000
 
+    # import pdb;pdb.set_trace()
     if "bins" in cost_name:
         assert num_bins is not None, "num_bins should not be None"
         freq_width = (sensor_freq//2)/num_bins
@@ -121,11 +130,19 @@ def cost_function(data, sensor_freq, cost_name, cost_stats, range=None, num_bins
 
         cost = np.mean(bps)
 
+        # Normalize cost:
+        cost = (cost-cost_stats["min"])/(cost_stats["max"]-cost_stats["min"])
+        cost = max(min(cost, 1), 0)
+
     elif "band" in cost_name:
-        assert range is not None, "range should not be None"
-        bp_z = bandpower(data, sensor_freq, range, window_sec=None, relative=False)
+        assert freq_range is not None, "range should not be None"
+        bp_z = bandpower(data, sensor_freq, freq_range, window_sec=None, relative=False)
 
         cost = bp_z
+
+        # Normalize cost:
+        cost = (cost-cost_stats["min"])/(cost_stats["max"]-cost_stats["min"])
+        cost = max(min(cost, 1), 0)
 
     else:
         raise NotImplementedError("cost_name needs to include bins or band")
@@ -144,27 +161,44 @@ class TraversabilityCostNode(object):
 
         # Set data buffer
         pad_val = Imu()
-        self.buffer = Buffer(250, padded=True, pad_val=pad_val.linear_acceleration.z)
+        pad_val.linear_acceleration.z = 9.81
+        self.imu_freq = 100
+        self.buffer_size = int(1*self.imu_freq)  # num_seconds*imu_freq
+        self.buffer = Buffer(self.buffer_size, padded=True, pad_val=pad_val.linear_acceleration.z)
 
+        # Load stats for different cost functions:
+        cost_stats_dir = "/home/mateo/Data/SARA/TartanCost/cost_statistics.yaml"
+        with open(cost_stats_dir, 'r') as f:
+            self.all_costs_stats = yaml.safe_load(f)
         # Information about sensor and sensor frequency, Min and max frequencies set the band to be analyzed for the cost function.
+        # self.cost_name = "freq_bins_5"
+        self.cost_name = "freq_band_1_30"
+        self.cost_stats = self.all_costs_stats[self.cost_name]
         self.sensor_name = "imu_z"
-        self.sensor_freq = 125
-        self.min_freq = 5
-        self.max_freq = 8
+        self.sensor_freq = 100
+        self.min_freq = 1
+        self.max_freq = 30
+        # self.num_bins = 5
+
 
     def handle_imu(self, msg):
+        print("-----")
+        print("Received IMU message")
         self.buffer.insert(msg.linear_acceleration.z)
-        cost = CostFunction(self.buffer.data, self.sensor_freq, min_freq=self.min_freq, max_freq=self.max_freq, sensor_name=self.sensor_name)
-
+        # cost = cost_function(self.buffer.data, self.imu_freq, self.cost_name, self.cost_stats, freq_range=None, num_bins=self.num_bins)
+        cost = cost_function(self.buffer.data, self.imu_freq, self.cost_name, self.cost_stats, freq_range=[self.min_freq, self.max_freq], num_bins=None)
+        print(f"Publishing cost: {cost}")
         self.cost_publisher.publish(cost)
+        print("Published cost!")
 
 
 if __name__ == "__main__":
-    rospy.init_node("traversability_cost_node", log_level=rospy.INFO)
-    rospy.loginfo("Initialized traversability_cost node")
+    rospy.init_node("traversability_cost_visualizer", log_level=rospy.INFO)
+    rospy.loginfo("Initialized traversability_cost_visualizer node")
 
     node = TraversabilityCostNode()
     rate = rospy.Rate(100)
 
     while not rospy.is_shutdown():
+
         rate.sleep()

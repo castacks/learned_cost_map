@@ -1,0 +1,42 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.12.11
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.8.10
+    start_time: 1650980493
+    t:
+      1:
+      - 1
+      - 41
+      2:
+      - 1
+      - 41
+      3:
+      - 16
+      4: 3.8.10
+      5: 0.12.11
+      8:
+      - 5
+batch_size:
+  desc: null
+  value: 10
+eval_interval:
+  desc: null
+  value: 5
+grad_clip:
+  desc: null
+  value: null
+lr:
+  desc: null
+  value: 0.001
+num_epochs:
+  desc: null
+  value: 20
+seq_length:
+  desc: null
+  value: 10
