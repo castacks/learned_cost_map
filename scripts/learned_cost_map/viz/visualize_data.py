@@ -122,7 +122,10 @@ def main():
 
 
         # Plot patches obtained from dataloader
+        # import pdb;pdb.set_trace()
         patches = data_dict["patches"][0]
+        masks = data_dict["masks"][0]
+
         # import pdb;pdb.set_trace()
         rgb_maps, height_maps = patches_to_imgs(patches)
         # for i,patch in enumerate(rgb_maps):
@@ -132,6 +135,15 @@ def main():
         #     plt.show()
         costs = data_dict["cost"][0]
         # import pdb;pdb.set_trace()
+        empty_map = torch.zeros(rgb_map_array.shape[:-1])
+
+        for i, mask in enumerate(masks):
+            cost = int(costs[i]*255)
+            pixel_list = mask.view(-1, 2)
+            empty_map[pixel_list[:,1], pixel_list[:,0]] = cost
+
+        empty_map = empty_map.cpu().numpy()
+
 
         front_rgb_ax.clear()
         rgb_map_ax.clear()
@@ -139,6 +151,7 @@ def main():
         front_rgb_ax.imshow(color_img_array)
         front_rgb_ax.set_title("Front Facing Camera")
         rgb_map_ax.imshow(rgb_map_array, origin="lower")
+        rgb_map_ax.imshow(empty_map, origin="lower", alpha=0.3)
         rgb_map_ax.set_xlabel("X axis")
         rgb_map_ax.set_ylabel("Y axis")
         rgb_map_ax.set_title("RGB map")
@@ -152,8 +165,6 @@ def main():
         height_map_ax.set_ylabel("Y axis")
         height_map_ax.set_zlabel("Z axis")
         height_map_ax.set_title("Height map")
-        # img_viewer.plot_surface(x, y, height_map_array)
-        # # img_viewer.imshow(rgb_map_array)
         plt.pause(0.1)
 
 if __name__=="__main__":

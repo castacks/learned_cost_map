@@ -10,8 +10,11 @@ class CostModel(nn.Module):
         self.model.conv1 = nn.Conv2d(in_channels=input_channels, out_channels=64, kernel_size=(7,7), stride=(2,2), padding=(3,3), bias=False)
         self.model.fc = nn.Linear(in_features=512, out_features=output_size, bias=True)
 
+        self.sigmoid = nn.Sigmoid()
+
     def forward(self, x):
         output = self.model(x)
+        output = self.sigmoid(output)
         return output
 
 

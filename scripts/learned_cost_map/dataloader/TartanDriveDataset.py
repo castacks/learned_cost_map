@@ -227,8 +227,9 @@ class DatasetBase(Dataset):
         # Load patches only after everything else is loaded
         if "patches" in self.datatypelist:
             datalen = self.modalitylenlist[self.datatypelist.index("patches")]
-            patcheslist = self.get_crops(sample["heightmap"], sample["rgbmap"], sample["odom"])
+            patcheslist, masks = self.get_crops(sample["heightmap"], sample["rgbmap"], sample["odom"])
             sample["patches"] = patcheslist
+            sample["masks"] = masks
 
         # Transform.
         if ( self.transform is not None):
@@ -287,7 +288,7 @@ class DatasetBase(Dataset):
 
         crop_width = 2.0  # in meters
         crop_size = [crop_width, crop_width]
-        output_size = [224, 224]
+        output_size = [64, 64]
 
         # TODO. Make sure the two dicts below are populated using from input parameters
         map_metadata = {
@@ -318,9 +319,12 @@ class DatasetBase(Dataset):
         tm = TerrainMap(maps=maps, map_metadata=map_metadata, device=device)
 
         local_path = get_local_path(torch.from_numpy(odom)).to(device)
-        patches = tm.get_crop_path(local_path, crop_params)
+
+        # patches = tm.get_crop_batch(local_path, crop_params)
+        patches, masks = tm.get_crop_batch_and_masks(local_path, crop_params)
         patches = [patch.permute(1,2,0).cpu().numpy() for patch in patches]
-        return patches
+
+        return patches, masks
 
 
 def data_transform(sample):

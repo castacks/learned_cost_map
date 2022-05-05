@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import numpy as np
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -52,7 +53,7 @@ def get_val_metrics(model, val_loader):
 
 
 def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
-         grad_clip=None, lr = 1e-3, eval_interval = 5):
+         grad_clip=None, lr = 1e-3, eval_interval = 5, save_interval = 5, saved_model=None):
 
     # os.makedirs('data/'+ log_dir, exist_ok = True)
     train_loader, val_loader = get_dataloaders(batch_size, seq_length)
@@ -60,6 +61,8 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
     model = CostModel(input_channels=8, output_size=1).cuda()
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
+    if saved_model is not None:
+        model.load_state_dict(torch.load(saved_model))
 
     if USE_WANDB:
         config = {
@@ -91,10 +94,17 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
             print(epoch, train_metrics)
             print(epoch, val_metrics)
 
+        if (epoch+1)%save_interval == 0:
+            models_dir = "models"
+            if not os.path.exists(models_dir):
+                os.makedirs(models_dir)
+            save_dir = os.path.join(models_dir, f"epoch_{epoch+1}.pt")
+            torch.save(model.state_dict(), save_dir)
+
 
 
 
 if __name__ == '__main__':
     # Run training loop
     main('test_run', num_epochs = 20, batch_size = 1, seq_length = 10,
-         grad_clip=None, lr = 1e-3, eval_interval = 1)
+         grad_clip=None, lr = 1e-3, eval_interval = 1, save_interval=1)

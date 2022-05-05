@@ -5,45 +5,7 @@ import matplotlib.pyplot as plt
 import os
 
 from learned_cost_map.terrain_utils.extract_patch import PatchTransform
-from learned_cost_map.utils.util import dict_to, quat_to_yaw, dict_map
-
-# from path_transform import TrajLoader, PathTransform
-# from extract_patch import PatchTransform
-# from util import dict_to, quat_to_yaw, dict_map
-
-
-def get_global_local_path(state, next_state):
-    current_p = state[:,:3]
-    current_q = state[:,3:]
-    current_yaw = quat_to_yaw(current_q)
-    
-    next_p = next_state[:,:3]
-    next_q = next_state[:,3:]
-    next_yaw = quat_to_yaw(next_q)
-
-    dx_global = next_p[:, 0] - current_p[:, 0]
-    dy_global = next_p[:, 1] - current_p[:, 1]
-    dyaw = next_yaw - current_yaw
-
-    # Original
-    dx = torch.cos(-current_yaw[[0]])*dx_global - torch.sin(-current_yaw[[0]])*dy_global
-    dy = torch.sin(-current_yaw[[0]])*dx_global + torch.cos(-current_yaw[[0]])*dy_global
-
-    # dy = -torch.cos(-current_yaw[[0]])*dx_global + torch.sin(-current_yaw[[0]])*dy_global
-    # dx = torch.sin(-current_yaw[[0]])*dx_global + torch.cos(-current_yaw[[0]])*dy_global
-
-    x_local = torch.cumsum(dx, dim=0).view(-1, 1)
-    y_local = torch.cumsum(dy, dim=0).view(-1, 1)
-    yaw_local = torch.cumsum(dyaw, dim=0).view(-1,1)
-    local_path = torch.cat((x_local, y_local, yaw_local), 1)
-
-    x_global = torch.cumsum(dx_global, dim=0).view(-1, 1)
-    y_global = torch.cumsum(dy_global, dim=0).view(-1, 1)
-    yaw_global = torch.cumsum(dyaw, dim=0).view(-1,1)  # Check
-    global_path = torch.cat((x_global, y_global, yaw_global), 1)
-
-    return global_path, local_path
-
+from learned_cost_map.utils.util import quat_to_yaw
 
 def get_local_path(odom):
     current_p = odom[:,:3]
@@ -62,7 +24,6 @@ def get_local_path(odom):
     dx = torch.cos(-current_yaw[[0]])*dx_global - torch.sin(-current_yaw[[0]])*dy_global
     dy = torch.sin(-current_yaw[[0]])*dx_global + torch.cos(-current_yaw[[0]])*dy_global
 
-
     x_local = torch.cumsum(dx, dim=0).view(-1, 1)
     y_local = torch.cumsum(dy, dim=0).view(-1, 1)
     yaw_local = torch.cumsum(dyaw, dim=0).view(-1,1)
@@ -71,7 +32,6 @@ def get_local_path(odom):
     local_path = torch.cat([torch.Tensor([[0.0, 0.0, 0.0]]), local_path], 0)
 
     return local_path
-
 
 
 class TerrainMap:
@@ -155,14 +115,19 @@ class TerrainMap:
         crops = torch.cat(crops, dim=0)
         return crops
 
-    def get_crop_batch(self, poses, crop_params):
+    def get_crop_batch_and_masks(self, poses, crop_params):
         '''Obtain an NxCxHxW tensor of crops for a given path.
 
         Procedure:
         1. Get initial meshgrid for crop in metric space centered around the origin
-        2. Apply affine transform to all the crop positions (to the entire meshgrid)
+        2. Apply affine transform to all the crop positions (to the entire meshgrid) using batch multiplication:
+            - The goal is to obtain a tensor of size [B, H, W, 2], where B is the batch size, H and W are the dimensions fo the image, and 2 corresponds to the actual x,y positions. To do this, we need to rotate and then translate every pair of points in the meshgrid. In batch multiplication, only the last two dimensions matter. That is, usually we need the following dimensions to do matrix multiplication: (m,n) x (n,p) -> (m,p). In batch multiplication, the last two dimensions of each array need to line up as mentioned above, and the earlier dimensions get broadcasted (more details in the torch matmul page). Here, we will reshape rotations to have shape [B,1,1,2,2] where B corresponds to batch size, the two dimensions with size 1 are there so that we can broadcast with the [H,W] dimensions in crop_positions, and the last two dimensions with size 2 reshape the each row in rotations into a rotation matrix that can left multiply a position to transform it. The output of torch.matmul(rotations, crop_positions) will be a [B,H,W,2,1] tensor. We will reshape translations to be a [B,1,1,2,1] vector so that we can add it to this output and obtain a tensor of size [B,H,W,2,1], which we will then squeeze to obtain our final tensor of size [B,H,W,2]
         3. Center around the right origin and rescale to obtain pixel coordinates
-        4. 
+        4. Obtain map values at those pixel coordinates and handle invalid coordinates using a mask
+
+        Note: 
+        - All tensors will obey the following axis convention: [batch x crop_x x crop_y x transform_x x transform_y]
+        - Input is in metric coordinates, so we flip the terrain map axes where necessary to match robot-centric coordinates
         
         Args:
             - path:
@@ -179,78 +144,66 @@ class TerrainMap:
             - crops:
                 Tensor of NxCxHxW of crops at poses on the path, where C is the number of channels in self.maps and N is the number of points in the path
         '''
-        #For reference, all tensors will obey the following axis convention:
-        # [batch x crop_x x crop_y x transform_x x transform_y]
-        # Also note that this is working in metric space. As such, the terrain map axes are flipped relative
-
-#        import pdb;pdb.set_trace()
-
         ## Create initial crop template in metric space centered around (0,0) to generate all pixel values
+        crop_height = crop_params['crop_size'][0] # In meters
+        crop_width = crop_params['crop_size'][1] # In meters
+        output_height = crop_params['output_size'][0] # In pixels
+        output_width = crop_params['output_size'][1] # In pixels
 
-        crop_xs = torch.linspace(-crop_params['crop_size'][0]/2., crop_params['crop_size'][0]/2., crop_params['output_size'][1]).to(self.device)
-        crop_ys = torch.linspace(-crop_params['crop_size'][1]/2., crop_params['crop_size'][1]/2., crop_params['output_size'][1]).to(self.device)
+        crop_xs = torch.linspace(-crop_height/2., crop_height/2., output_height).to(self.device)
+        crop_ys = torch.linspace(-crop_width/2., crop_width/2., output_width).to(self.device)
         crop_positions = torch.stack(torch.meshgrid(crop_xs, crop_ys, indexing="ij"), dim=-1) # HxWx2 tensor
 
-        translations = poses[:, :2]  # Nx2 tensor, where each row corresponds to [x, y] position in metric space
-        rotations = torch.stack([poses[:, 2].cos(), -poses[:, 2].sin(), poses[:, 2].sin(), poses[:, 2].cos()], dim=-1)  # Nx4 tensor where each row corresponds to [cos(theta), -sin(theta), sin(theta), cos(theta)]
-        
-        ## Reshape tensors to perform batch tensor multiplication. 
+        ## Obtain translations and rotations for 2D rigid body transformation
+        translations = poses[:, :2]  # Nx2 tensor, [x, y] in metric space
+        yaws = poses[:,2]
+        rotations = torch.stack([torch.cos(yaws), -torch.sin(yaws), torch.sin(yaws), torch.cos(yaws)], dim=-1)  # Nx4 tensor where each row corresponds to [cos(theta), -sin(theta), sin(theta), cos(theta)]
 
-        # The goal is to obtain a tensor of size [B, H, W, 2], where B is the batch size, H and W are the dimensions fo the image, and 2 corresponds to the actual x,y positions. To do this, we need to rotate and then translate every pair of points in the meshgrid. In batch multiplication, only the last two dimensions matter. That is, usually we need the following dimensions to do matrix multiplication: (m,n) x (n,p) -> (m,p). In batch multiplication, the last two dimensions of each array need to line up as mentioned above, and the earlier dimensions get broadcasted (more details in the torch matmul page). Here, we will reshape rotations to have shape [B,1,1,2,2] where B corresponds to batch size, the two dimensions with size 1 are there so that we can broadcast with the [H,W] dimensions in crop_positions, and the last two dimensions with size 2 reshape the each row in rotations into a rotation matrix that can left multiply a position to transform it. The output of torch.matmul(rotations, crop_positions) will be a [B,H,W,2,1] tensor. We will reshape translations to be a [B,1,1,2,1] vector so that we can add it to this output and obtain a tensor of size [B,H,W,2,1], which we will then squeeze to obtain our final tensor of size [B,H,W,2]
-        
+        ## Reshape tensors to perform batch tensor multiplication. 
         rotations = rotations.view(-1, 1, 1, 2, 2) #[B x 1 x 1 x 2 x 2]
         crop_positions = crop_positions.view(1, *crop_params['output_size'], 2, 1) #[1 x H x W x 2 x 1]
         translations = translations.view(-1, 1, 1, 2, 1) #[B x 1 x 1 x 2 x 1]
-        
-        import pdb;pdb.set_trace()
+
         # Apply each transform to all crop positions (res = [B x H x W x 2])
         crop_positions_transformed = (torch.matmul(rotations, crop_positions) + translations).squeeze()
 
         # Obtain actual pixel coordinates
-        map_origin = self.map_metadata['origin'].view(1, 1, 1, 2)
-        pixel_coordinates = ((crop_positions_transformed - map_origin) / self.map_metadata['resolution']).long()
+        map_origin = torch.Tensor(self.map_metadata['origin']).view(1, 1, 1, 2).to(self.device)
+        resolution = self.map_metadata['resolution']
+        pixel_coordinates = ((crop_positions_transformed - map_origin) / resolution).long()  # .long() is needed so that we can use these as indices
 
-        pixel_coordinates_flipped = pixel_coordinates.swapaxes(-2,-3)
-
-        # Obtain maximum and minimum values of map to later filter out of bounds pixels
+        # Obtain maximum and minimum values of map to later filter out pixel locations that are out of bounds
         map_p_low = torch.tensor([0, 0]).to(self.device).view(1, 1, 1, 2)
         map_p_high = torch.tensor(self.maps_tensor.shape[1:]).to(self.device).view(1, 1, 1, 2)
-        invalid_mask = (pixel_coordinates < map_p_low).any(dim=-1) | (pixel_coordinates >= map_p_high).any(dim=-1)
+        invalid_mask = (pixel_coordinates < map_p_low).any(dim=-1) | (pixel_coordinates >= map_p_high).any(dim=-1)  # If map is not square we might need to swap these axes as well
 
-#        import matplotlib.pyplot as plt
-#        for i in torch.arange(0, 100, 20):
-#            plt.scatter(pixel_coordinates[i,...,0].flatten().cpu(), pixel_coordinates[i,...,1].flatten().cpu(), s=1.)
-#            print(poses[i].cpu())
-#        plt.show()
-
-        #Indexing method: set all invalid idxs to a valid one (i.e. 0), index, then mask out the results
-
-        #TODO: Per-channel fill value
-        fill_value = 0
-        pixel_coordinates[invalid_mask]=0
-        pixel_coordinates_flipped[invalid_mask] = 0
-
-
+        #Indexing method: set all invalid idxs to a valid pixel position (i.e. 0) so that we can perform batch indexing, then mask out the results
+        pixel_coordinates[invalid_mask] = 0
         pxlist = pixel_coordinates.view(-1, 2)
-        pxlist_flipped = pixel_coordinates_flipped.reshape(-1,2)
+
 
         #[B x C x W x H]
-        # import pdb;pdb.set_trace()
-        values_temp = self.maps_tensor[:,pxlist_flipped[:,0], pxlist_flipped[:,1]]  # Notice axes are flipped to account for terrain body centric coordinates.
-        values_temp = values_temp.view(self.maps_tensor.shape[0], poses.shape[0], *crop_params['output_size']).swapaxes(0, 1)
+        flipped_maps = self.maps_tensor.swapaxes(-1, -2) # To align with robot-centric coordinates since poses are in robot-centric coords.
+        map_values  = flipped_maps[:, pxlist[:, 0], pxlist[:, 1]]
 
-        values = self.maps_tensor.swapaxes(-1, -2)[:, pxlist[:, 0], pxlist[:, 1]].view(self.maps_tensor.shape[0], poses.shape[0], *crop_params['output_size']).swapaxes(0, 1)
+        # Reshape map values so that they go from [C, B*W*H] to [B, C, W, H]
+        map_values = map_values.view(self.maps_tensor.shape[0], poses.shape[0], *crop_params['output_size']).swapaxes(0,1)
 
-#        k1 = invalid_mask.unsqueeze(1).repeat(1, self.maps_tensor.shape[0], 1, 1)
-#        values[k1] = fill_value
-        # values_1 = values.swapaxes(-1,-2)
-        # import pdb;pdb.set_trace()
+        fill_value = 0  # TODO: Could have per-channel fill value as well
 
-        k1 = invalid_mask.unsqueeze(1).float()
-        values = (1.-k1)*values + k1*fill_value
+        # Convert invalid mask from [B, H, W] to [B, C, H, W] where C=1 so that we can perform batch operations
+        invalid_mask = invalid_mask.unsqueeze(1).float()
+        patches = (1.-invalid_mask)*map_values + invalid_mask*fill_value
 
-        return values.swapaxes(-1, -2)
-        
+        # Swap order from [B, C, W, H] to [B, C, H, W]
+        patches = patches.swapaxes(-1, -2) 
+
+        return patches, pixel_coordinates
+
+    def get_crop_batch(self, poses, crop_params):
+        patches, masks = self.get_crop_batch_and_masks(poses, crop_params)
+        return patches
+
 
     def get_labeled_crops(self, trajectory, crop_params):
         
