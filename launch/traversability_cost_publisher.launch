@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+
+<launch>
+    <node pkg="learned_cost_map" type="cost_publisher.py" name="traversability_cost_publisher" output="screen" />    
+
+</launch>
+
+

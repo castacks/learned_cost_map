@@ -2,6 +2,7 @@
 import rospy
 from std_msgs.msg import Float32
 from sensor_msgs.msg import Imu
+from learned_cost_map.msg import FloatStamped
 import numpy as np
 
 import scipy
@@ -11,7 +12,6 @@ from scipy.integrate import simps
 
 import os
 import yaml
-
 
 class Buffer:
     '''Maintains a scrolling buffer to maintain a window of data in memory
@@ -157,7 +157,7 @@ class TraversabilityCostNode(object):
 
         # Set up publishers
         self.cost = None
-        self.cost_publisher = rospy.Publisher('/traversability_cost', Float32, queue_size=10)
+        self.cost_publisher = rospy.Publisher('/traversability_cost', FloatStamped, queue_size=10)
 
         # Set data buffer
         pad_val = Imu()
@@ -167,7 +167,8 @@ class TraversabilityCostNode(object):
         self.buffer = Buffer(self.buffer_size, padded=True, pad_val=pad_val.linear_acceleration.z)
 
         # Load stats for different cost functions:
-        cost_stats_dir = "/home/mateo/Data/SARA/TartanCost/cost_statistics.yaml"
+        cost_stats_dir = "/home/yamaha/physics_atv_ws/src/perception/learned_cost_map/scripts/learned_cost_map/ros/cost_statistics.yaml"
+        
         with open(cost_stats_dir, 'r') as f:
             self.all_costs_stats = yaml.safe_load(f)
         # Information about sensor and sensor frequency, Min and max frequencies set the band to be analyzed for the cost function.
@@ -188,13 +189,16 @@ class TraversabilityCostNode(object):
         # cost = cost_function(self.buffer.data, self.imu_freq, self.cost_name, self.cost_stats, freq_range=None, num_bins=self.num_bins)
         cost = cost_function(self.buffer.data, self.imu_freq, self.cost_name, self.cost_stats, freq_range=[self.min_freq, self.max_freq], num_bins=None)
         print(f"Publishing cost: {cost}")
-        self.cost_publisher.publish(cost)
+        cost_msg = FloatStamped()
+        cost_msg.header = msg.header
+        cost_msg.data = cost
+        self.cost_publisher.publish(cost_msg)
         print("Published cost!")
 
 
 if __name__ == "__main__":
-    rospy.init_node("traversability_cost_visualizer", log_level=rospy.INFO)
-    rospy.loginfo("Initialized traversability_cost_visualizer node")
+    rospy.init_node("traversability_cost_publisher", log_level=rospy.INFO)
+    rospy.loginfo("Initialized traversability_cost_publisher node")
 
     node = TraversabilityCostNode()
     rate = rospy.Rate(100)

@@ -7,7 +7,10 @@ project(learned_cost_map)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED COMPONENTS 
+  std_msgs
+  message_generation
+)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -43,11 +46,12 @@ catkin_python_setup()
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  FloatStamped.msg
+  # Message1.msg
+  # Message2.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -64,10 +68,11 @@ catkin_python_setup()
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  learned_cost_map  # Or other packages containing msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -101,7 +106,7 @@ catkin_python_setup()
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES traversability_cost
-#  CATKIN_DEPENDS other_catkin_pkg
+ CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
 
@@ -202,13 +207,14 @@ include_directories(
 # catkin_add_nosetests(test)
 
 catkin_install_python(PROGRAMS
-    scripts/learned_cost_map/extract_patch.py
-    scripts/learned_cost_map/feature_extractor.py
-    scripts/learned_cost_map/knn.py
-    scripts/learned_cost_map/learned_cost_map_node.py
-    scripts/learned_cost_map/path_transform.py
-    scripts/learned_cost_map/terrain_map.py
-    scripts/learned_cost_map/util.py
+    scripts/learned_cost_map/ros/cost_publisher.py
+    # scripts/learned_cost_map/terrain_utils/*.py
+    # scripts/learned_cost_map/data_loader/*.py
+    # scripts/learned_cost_map/data_processing/*.py
+    # scripts/learned_cost_map/test/*.py
+    # scripts/learned_cost_map/trainer/*.py
+    # scripts/learned_cost_map/utils/*.py
+    # scripts/learned_cost_map/viz/*.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
