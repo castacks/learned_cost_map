@@ -76,7 +76,7 @@ class CostmapNode(object):
         # print('Receive rgbmap {}'.format(self.rgbmap_inflate.shape))
 
     def publish_costmap(self):
-        import pdb;pdb.set_trace()
+        # import pdb;pdb.set_trace()
         if (self.rgbmap_inflate is None) or (self.heightmap_inflate is None):
             return 
         maps = rosmsgs_to_maps(self.rgbmap_inflate, self.heightmap_inflate)
