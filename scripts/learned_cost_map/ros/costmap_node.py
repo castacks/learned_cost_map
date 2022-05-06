@@ -1,21 +1,17 @@
 #!/usr/bin/env python
-import cv2
-import numpy as np
-
 import rospy
-import ros_numpy
 import torch
+import numpy as np
 
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 
-from std_msgs.msg import Float32MultiArray, MultiArrayDimension, Header
-
+from std_msgs.msg import Header
+from nav_msgs.msg import OccupancyGrid, MapMetaData
 import time
 
 from learned_cost_map.utils.costmap_utils import produce_costmap, rosmsgs_to_maps
 from learned_cost_map.trainer.model import CostModel
-# from learned_cost_map.trainer.utils import get_dataloaders
 
 
 class CostmapNode(object):
@@ -54,6 +50,11 @@ class CostmapNode(object):
             'output_size': output_size
         }
 
+        # We will take the header of the rgbmap to populate the header of the output occupancy grid
+        self.header = None 
+
+        self.costmap_pub = rospy.Publisher('/learned_costmap', OccupancyGrid, queue_size=1, latch=False)
+
 
     def handle_height(self, msg):
         self.heightmap = self.cvbridge.imgmsg_to_cv2(msg, "32FC4")
@@ -66,6 +67,7 @@ class CostmapNode(object):
 
     def handle_height_inflate(self, msg):
         self.heightmap_inflate = self.cvbridge.imgmsg_to_cv2(msg, "32FC4")
+        self.header = msg.header
         # print('Receive heightmap {}'.format(self.heightmap_inflate.shape))
         # import ipdb;ipdb.set_trace()
 
@@ -75,9 +77,29 @@ class CostmapNode(object):
 
     def publish_costmap(self):
         import pdb;pdb.set_trace()
+        if (self.rgbmap_inflate is None) or (self.heightmap_inflate is None):
+            return 
         maps = rosmsgs_to_maps(self.rgbmap_inflate, self.heightmap_inflate)
+        before = time.time()
         costmap = produce_costmap(self.model, maps, self.map_metadata, self.crop_params)
+        print(f"Takes {time.time()-before} seconds to produce a costmap")
 
+        costmap_grid = OccupancyGrid()
+        costmap_grid.header = self.header
+        costmap_grid.info.map_load_time = costmap_grid.header.stamp
+        costmap_grid.info.resolution = self.map_metadata['resolution']
+        costmap_grid.info.width = int(self.map_metadata['width']*1/self.map_metadata['resolution'])
+        costmap_grid.info.height = int(self.map_metadata['height']*1/self.map_metadata['resolution'])
+        costmap_grid.info.origin.position.x = self.map_metadata['origin'][0]
+        costmap_grid.info.origin.position.y = self.map_metadata['origin'][1]
+        costmap_grid.info.origin.orientation.x = 0.0
+        costmap_grid.info.origin.orientation.y = 0.0
+        costmap_grid.info.origin.orientation.z = 0.0
+        costmap_grid.info.origin.orientation.w = 1.0
+
+        costmap_grid.data = (costmap*100).astype(np.int8).flatten().tolist()
+
+        self.costmap_pub.publish(costmap_grid)
 
 
 if __name__ == '__main__':
