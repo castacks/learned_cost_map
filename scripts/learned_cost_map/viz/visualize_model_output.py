@@ -118,7 +118,7 @@ def main():
         x, y = preprocess_data(data_dict)
         pred_cost = model(x)
 
-        import pdb;pdb.set_trace()
+        # import pdb;pdb.set_trace()
 
         # Plot RGB front facing image
         color_img_tensor = data_dict["imgc"][0,0]
@@ -170,7 +170,7 @@ def main():
         for i,patch in enumerate(rgb_maps):
             patches_axs[i].imshow(patch, origin="lower")
             cost = costs[i]
-            patches_axs[i].set_title(f"Cost: {cost:.2f}")
+            patches_axs[i].set_title(f"GT Cost: {cost:.2f}\nPred Cost: {pred_cost:.2f}")
         height_map_ax.plot_surface(x,y,height_map_array_low, cmap=cm.coolwarm, alpha=0.5)
         height_map_ax.plot_surface(x,y,height_map_array_high, cmap=cm.PRGn, alpha=0.5)
         height_map_ax.set_xlabel("X axis")
