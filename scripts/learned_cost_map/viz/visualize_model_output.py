@@ -116,7 +116,7 @@ def main():
     for i, data_dict in enumerate(train_loader):
         # Get cost from neural net
         x, y = preprocess_data(data_dict)
-        pred_cost = model(x)
+        pred_cost = model(x).squeeze()
 
         # import pdb;pdb.set_trace()
 
