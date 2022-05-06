@@ -13,12 +13,13 @@ from std_msgs.msg import Float32MultiArray, MultiArrayDimension, Header
 
 import time
 
-from learned_cost_map.utils.costmap_utils import produce_costmap
+from learned_cost_map.utils.costmap_utils import produce_costmap, rosmsgs_to_maps
 from learned_cost_map.trainer.model import CostModel
 # from learned_cost_map.trainer.utils import get_dataloaders
 
+
 class CostmapNode(object):
-    def __init__(self):
+    def __init__(self, saved_model):
         self.cvbridge = CvBridge()
 
         rospy.Subscriber('/local_height_map_inflate', Image, self.handle_height_inflate, queue_size=1)
@@ -65,35 +66,30 @@ class CostmapNode(object):
 
     def handle_height_inflate(self, msg):
         self.heightmap_inflate = self.cvbridge.imgmsg_to_cv2(msg, "32FC4")
-        print('Receive heightmap {}'.format(self.heightmap_inflate.shape))
+        # print('Receive heightmap {}'.format(self.heightmap_inflate.shape))
         # import ipdb;ipdb.set_trace()
 
     def handle_rgb_inflate(self, msg):
         self.rgbmap_inflate = self.cvbridge.imgmsg_to_cv2(msg, "rgb8")
-        print('Receive rgbmap {}'.format(self.rgbmap_inflate.shape))
+        # print('Receive rgbmap {}'.format(self.rgbmap_inflate.shape))
 
     def publish_costmap(self):
-        rgb_map_tensor = torch.from_numpy(self.)
-        height_map_tensor = TODO
-
-        maps = {
-            'rgb_map':rgb_map_tensor,
-            'height_map':height_map_tensor
-        }
-
+        import pdb;pdb.set_trace()
+        maps = rosmsgs_to_maps(self.rgbmap_inflate, self.heightmap_inflate)
         costmap = produce_costmap(self.model, maps, self.map_metadata, self.crop_params)
+
 
 
 if __name__ == '__main__':
 
-    rospy.init_node("test_localmap", log_level=rospy.INFO)
+    rospy.init_node("learned_costmap_node", log_level=rospy.INFO)
 
-    rospy.loginfo("test_localmap node initialized")
-    node = TestLocalmap()
+    rospy.loginfo("learned_costmap_node initialized")
+    saved_model = "/home/mateo/learned_cost_map/scripts/learned_cost_map/trainer/models/epoch_19.pt"
+    node = CostmapNode(saved_model)
     r = rospy.Rate(10)
     while not rospy.is_shutdown(): # loop just for visualization
-        node.show_heightmap()
-        node.show_colormap()
+        node.publish_costmap()
 
 
         
