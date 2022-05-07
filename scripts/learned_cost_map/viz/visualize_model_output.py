@@ -7,6 +7,8 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.gridspec as gridspec
 from learned_cost_map.trainer.utils import get_dataloaders, preprocess_data
 from learned_cost_map.trainer.model import CostModel
+from learned_cost_map.terrain_utils.terrain_map_tartandrive import get_local_path
+from learned_cost_map.utils.costmap_utils import local_path_to_pixels
 
 
 bgr_to_rgb = lambda img: img[[2,1,0],:,:] 
@@ -100,53 +102,33 @@ def main():
     train_loader, val_loader = get_dataloaders(batch_size, seq_length)
 
     fig = plt.figure()
-    spec = gridspec.GridSpec(ncols=10, nrows=4, figure=fig)
-    front_rgb_ax = fig.add_subplot(spec[0:2, 0:5])
-    rgb_map_ax   = fig.add_subplot(spec[0:2,5:])
-    patches_axs  = [fig.add_subplot(spec[2,i]) for i in range(5)] + [fig.add_subplot(spec[3,i]) for i in range(5)]
-    height_map_ax = fig.add_subplot(spec[2:4, 5:], projection="3d")
+    spec = gridspec.GridSpec(ncols=5, nrows=4, figure=fig)
+    patches_axs  = [fig.add_subplot(spec[0,i]) for i in range(5)] + [fig.add_subplot(spec[1,i]) for i in range(5)]
+    gt_costmap_ax = fig.add_subplot(spec[2:4,0:2])
+    pred_costmap_ax = fig.add_subplot(spec[2:4,3:5])
+    rgb_map_ax = fig.add_subplot(spec[2:4,2])
 
     saved_model = "/home/mateo/learned_cost_map/scripts/learned_cost_map/trainer/models/epoch_20.pt"
     model = CostModel(input_channels=8, output_size=1).cuda()
     model.load_state_dict(torch.load(saved_model))
     model.eval()
 
-
-    # img_viewer = fig.add_subplot(111, projection="3d")
     for i, data_dict in enumerate(train_loader):
+        # import pdb;pdb.set_trace()
         # Get cost from neural net
         x, y = preprocess_data(data_dict)
-        pred_cost = model(x).squeeze()
+        pred_costs = model(x).detach().cpu().squeeze()
 
-        # import pdb;pdb.set_trace()
-
-        # Plot RGB front facing image
-        color_img_tensor = data_dict["imgc"][0,0]
-        color_img_array  = tensor_to_img(color_img_tensor)
-
+        # Get rgb map
         rgb_map_tensor = data_dict["rgbmap"][0,0].permute(0,2,1)
         rgb_map_array = tensor_to_img(rgb_map_tensor)
 
-        height_map_tensor = data_dict["heightmap"][0,0].permute(0,2,1)
-        height_map_array_low = tensor_to_heightmap(height_map_tensor)[:,:,0]
-        height_map_array_high = tensor_to_heightmap(height_map_tensor)[:,:,1]
-        x,y = np.meshgrid(range(height_map_array_high.shape[0]), range(height_map_array_high.shape[1]))
-
-
         # Plot patches obtained from dataloader
-        # import pdb;pdb.set_trace()
         patches = data_dict["patches"][0]
         masks = data_dict["masks"][0]
 
-        # import pdb;pdb.set_trace()
         rgb_maps, height_maps = patches_to_imgs(patches)
-        # for i,patch in enumerate(rgb_maps):
-        #     print(f"Looking at patch {i}/{len(rgb_maps)}")
-        #     plt.imshow(patch)
-        #     plt.colorbar()
-        #     plt.show()
         costs = data_dict["cost"][0]
-        # import pdb;pdb.set_trace()
         empty_map = torch.zeros(rgb_map_array.shape[:-1])
 
         for i, mask in enumerate(masks):
@@ -156,27 +138,59 @@ def main():
 
         empty_map = empty_map.cpu().numpy()
 
+        # Get local odom to plot path:
+        odom_tensor = data_dict["odom"][0]
+        local_path = get_local_path(odom_tensor)
+        map_metadata = {
+                'height': 12.0,
+                'width': 12.0,
+                'resolution': 0.02,
+                'origin': [-2.0, -6.0]
+            }
+        path_pix_x, path_pix_y = local_path_to_pixels(local_path, map_metadata)
+        gt_costmap = torch.zeros(rgb_map_array.shape[:-1])
+        pred_costmap = torch.zeros(rgb_map_array.shape[:-1])
 
-        front_rgb_ax.clear()
+
+        for i, mask in enumerate(masks):
+            gt_cost = int(costs[i]*255)
+            pred_cost = int(pred_costs[i]*255)
+            pixel_list = mask.view(-1, 2)
+            gt_costmap[pixel_list[:,1], pixel_list[:,0]] = gt_cost
+            pred_costmap[pixel_list[:,1], pixel_list[:,0]] = cost
+
+        gt_costmap[path_pix_y, path_pix_x] = 255 # TODO: Change to known cost value
+        pred_costmap[path_pix_y, path_pix_x] = 255 # TODO: Change to known cost value
+
+        print(f"Path pixels:")
+        print(path_pix_x)
+        print(path_pix_y)
+
+        gt_costmap = gt_costmap.cpu().numpy().astype(np.uint8)
+        pred_costmap = pred_costmap.cpu().numpy().astype(np.uint8)
+
+        gt_costmap_ax.clear()
+        pred_costmap_ax.clear()
         rgb_map_ax.clear()
-        height_map_ax.clear()
-        front_rgb_ax.imshow(color_img_array)
-        front_rgb_ax.set_title("Front Facing Camera")
-        rgb_map_ax.imshow(rgb_map_array, origin="lower")
-        rgb_map_ax.imshow(empty_map, origin="lower", alpha=0.3)
-        rgb_map_ax.set_xlabel("X axis")
-        rgb_map_ax.set_ylabel("Y axis")
-        rgb_map_ax.set_title("RGB map")
+
+
         for i,patch in enumerate(rgb_maps):
+            patches_axs[i].clear()
             patches_axs[i].imshow(patch, origin="lower")
             cost = costs[i]
+            pred_cost = pred_costs[i]
             patches_axs[i].set_title(f"GT Cost: {cost:.2f}\nPred Cost: {pred_cost:.2f}")
-        height_map_ax.plot_surface(x,y,height_map_array_low, cmap=cm.coolwarm, alpha=0.5)
-        height_map_ax.plot_surface(x,y,height_map_array_high, cmap=cm.PRGn, alpha=0.5)
-        height_map_ax.set_xlabel("X axis")
-        height_map_ax.set_ylabel("Y axis")
-        height_map_ax.set_zlabel("Z axis")
-        height_map_ax.set_title("Height map")
+
+        gt_costmap_ax.imshow(gt_costmap, origin="lower", vmin=0.0, vmax=255.0)
+        gt_costmap_ax.set_title("Ground truth costmap")
+        pred_costmap_ax.imshow(pred_costmap, origin="lower", vmin=0.0, vmax=255.0)
+        pred_costmap_ax.set_title("Predicted costmap")
+        rgb_map_ax.imshow(rgb_map_array, origin="lower")
+        rgb_map_ax.set_title("RGB map")
+
+        plt.subplots_adjust(wspace=1.5)
+        if i == 0:
+            plt.pause(5)
         plt.pause(0.1)
 
 if __name__=="__main__":
