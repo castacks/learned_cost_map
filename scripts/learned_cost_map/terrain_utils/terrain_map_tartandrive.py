@@ -9,7 +9,7 @@ from learned_cost_map.utils.util import quat_to_yaw
 
 def get_local_path(odom):
     current_p = odom[:,:3]
-    current_q = odom[:,3:]
+    current_q = odom[:,3:7]
     current_yaw = quat_to_yaw(current_q)
     
     next_odom = torch.cat([odom, odom[[-1]]], dim=0)[1:]
