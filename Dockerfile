@@ -63,7 +63,7 @@ RUN sudo pip3 install --no-cache-dir cupy-cuda113
 RUN sudo pip3 install --no-cache-dir torch==1.10.0 torchvision # tensorflow
 RUN sudo pip3 install --no-cache-dir pyyaml gym tabulate
 
-RUN sudo pip3 install --no-cache-dir catkin_pkg
+RUN sudo pip3 install --no-cache-dir catkin_pkg wandb
 
 
 # entrypoint command

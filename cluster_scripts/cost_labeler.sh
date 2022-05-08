@@ -21,6 +21,9 @@ COSTSTATS_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/
 cd $PACKAGE_DIR
 sudo pip3 install -e .
 
+# Login to Weights and Biases
+wandb login b47938fa5bae1f5b435dfa32a2aa5552ceaad5c6
+
 # Run labeling script
 ${EXE_PYTHON} $BASE_DIR/$PY_SCRIPT \
     --data_dir $DATA_DIR \

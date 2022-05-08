@@ -11,8 +11,11 @@ def get_dataloaders(batch_size, seq_length):
     train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
     val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
 
-    datatypes = "img0,img1,imgc,disp0,heightmap,rgbmap,cmd,odom,cost,patches,imu"
-    base_mod_lengths = [1,1,1,1,1,1,1,1,1,1,10]
+    # datatypes = "img0,img1,imgc,disp0,heightmap,rgbmap,cmd,odom,cost,patches,imu"
+    # base_mod_lengths = [1,1,1,1,1,1,1,1,1,1,10]
+
+    datatypes = "imgc,heightmap,rgbmap,odom,cost,patches"
+    base_mod_lengths = [1,1,1,1,1,1]
     modality_lengths = [seq_length*l for l in base_mod_lengths]
 
     train_set = DatasetBase(train_split,

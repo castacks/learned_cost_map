@@ -19,13 +19,16 @@ def traversability_cost_loss(model, x, y):
     # Get loss averaged accross batch
     loss = criterion(pred_cost, y)/pred_cost.shape[0]
 
-    return loss, OrderedDict(loss=loss)
+    random_cost = torch.rand(pred_cost.shape).cuda()
+    random_loss = criterion(random_cost, y)/random_cost.shape[0]
+
+    return loss, OrderedDict(loss=loss, random_loss=random_loss)
 
 def run_train_epoch(model, train_loader, optimizer, grad_clip = None):
     model.train()
     all_metrics = []
     for i, data_dict in enumerate(train_loader):
-        print(f"Training batch {1}")
+        print(f"Training batch {i}/{len(train_loader)}")
         x, y = preprocess_data(data_dict)
 
         loss, _metric = traversability_cost_loss(model, x, y)
@@ -44,8 +47,9 @@ def get_val_metrics(model, val_loader):
     model.eval()
     all_metrics = []
     with torch.no_grad():
-        for data_dict in val_loader:
-            x, y = preprocess_data(data_dict    )
+        for i,data_dict in enumerate(val_loader):
+            print(f"Validation batch {i}/{len(val_loader)}")
+            x, y = preprocess_data(data_dict)
             loss, _metric = traversability_cost_loss(model, x, y)
             all_metrics.append(_metric)
 
@@ -73,12 +77,15 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
             'num_epochs': num_epochs,
             'eval_interval': eval_interval
         }
+        print("Training configuration: ")
+        print(config)
         wandb.init(project="SARA", reinit=True, config=config)
 
 
     for epoch in range(num_epochs):
-        print(f'Epoch: {epoch}')
+        print(f"Training, epoch {epoch}")
         train_metrics = run_train_epoch(model, train_loader, optimizer, grad_clip)
+        print(f"Validation, epoch {epoch}")
         val_metrics = get_val_metrics(model, val_loader)
 
         #TODO : add plotting code for metrics (required for multiple parts)
@@ -106,5 +113,5 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
 
 if __name__ == '__main__':
     # Run training loop
-    main('test_run', num_epochs = 20, batch_size = 10, seq_length = 10,
+    main('test_run', num_epochs = 20, batch_size = 16, seq_length = 10,
          grad_clip=None, lr = 1e-3, eval_interval = 1, save_interval=1)
