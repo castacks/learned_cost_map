@@ -24,7 +24,7 @@ sudo pip3 install -e .
 # Run labeling script
 ${EXE_PYTHON} $BASE_DIR/$PY_SCRIPT \
     --data_dir $DATA_DIR \
-    --coststats_dir 
+    --coststats_dir $COSTSTATS_DIR
 
 
 echo Labeling shell script ends.
