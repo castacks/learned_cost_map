@@ -157,14 +157,22 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
+    parser.add_argument('--coststats_dir', type=str, required=True, help='Path to cost_statistics.yaml file that contains statistics for IMU cost functions.')
     args = parser.parse_args()
 
     # Find all trajectory directories
-    trajectories_dir = os.path.join(args.data_dir, "Trajectories")
+    # trajectories_dir = os.path.join(args.data_dir, "Trajectories")
+    # Below: set up for cluster:
+    trajectories_dir = args.data_dir
     traj_dirs = list(filter(os.path.isdir, [os.path.join(trajectories_dir,x) for x in sorted(os.listdir(trajectories_dir))]))
 
     ## Initialize cost parameters
-    cost_stats_dir = "/home/mateo/Data/SARA/TartanCost/cost_statistics.yaml"
+    # cost_stats_dir = "/home/mateo/Data/SARA/TartanCost/cost_statistics.yaml"
+    # Below: Set up for cluster
+
+    cost_stats_dir = args.coststats_dir
+
+    # cost_stats_dir = "/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/ros/cost_statistics.yaml"
     with open(cost_stats_dir, 'r') as f:
         all_costs_stats = yaml.safe_load(f)
     cost_name = "freq_band_1_30"
