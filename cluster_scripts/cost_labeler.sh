@@ -12,7 +12,7 @@ BASE_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/data_
 
 PY_SCRIPT=cost_labeler.py
 
-DATA_DIR=/project/learningphysics/tartandrive_trajs_test
+DATA_DIR=/project/learningphysics/tartandrive_trajs
 
 COSTSTATS_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/ros/cost_statistics.yaml
 
