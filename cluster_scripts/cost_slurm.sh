@@ -20,6 +20,4 @@ EXE_SCRIPT=$WORKING_DIR/cost_labeler
 
 USER=mguamanc
 
-nvidia-docker run --rm -e CUDA_VISIBLE_DEVICES=`echo $CUDA_VISIBLE_DEVICES` -v /data/datasets/:/data/datasets/ yaoyuh/pytorch_16.04:v2.3 $EXE $EXE_SCRIPT
-
 nvidia-docker run --rm --ipc=host -e CUDA_VISIBLE_DEVICES='echo $CUDA_VISIBLE_DEVICES' -v /data/datasets:/data/datasets -v /home/$USER:/home/$USER -v /projects:/projects mguamanc/sara $EXE $EXE_SCRIPT
