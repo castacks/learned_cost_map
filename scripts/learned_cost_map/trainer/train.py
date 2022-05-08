@@ -106,5 +106,5 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
 
 if __name__ == '__main__':
     # Run training loop
-    main('test_run', num_epochs = 20, batch_size = 1, seq_length = 10,
+    main('test_run', num_epochs = 20, batch_size = 10, seq_length = 10,
          grad_clip=None, lr = 1e-3, eval_interval = 1, save_interval=1)

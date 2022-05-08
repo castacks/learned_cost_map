@@ -97,7 +97,7 @@ def patches_to_imgs(patches_tensor):
     return rgb_maps, height_maps
 
 def main():
-    batch_size = 1
+    batch_size = 10
     seq_length = 10
     train_loader, val_loader = get_dataloaders(batch_size, seq_length)
 
