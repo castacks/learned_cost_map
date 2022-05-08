@@ -16,7 +16,7 @@
 # Executable
 EXE=/bin/bash
 WORKING_DIR=/data/datasets/mguamanc/learned_cost_map/cluster_scripts
-EXE_SCRIPT=$WORKING_DIR/cost_labeler
+EXE_SCRIPT=$WORKING_DIR/cost_labeler.sh
 
 USER=mguamanc
 
