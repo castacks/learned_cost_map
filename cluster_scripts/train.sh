@@ -14,9 +14,9 @@ PY_SCRIPT=train.py
 
 DATA_DIR=/project/learningphysics/tartandrive_trajs
 
-TRAIN_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/tartandrive_train.txt
+TRAIN_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/small_train.txt
 
-VAL_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/tartandrive_val.txt
+VAL_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/small_val.txt
 
 
 # Install learned_cost_map package
