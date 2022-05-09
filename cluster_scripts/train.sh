@@ -24,7 +24,11 @@ cd $PACKAGE_DIR
 sudo pip3 install -e .
 
 # Login to Weights and Biases
+echo Attempting wandb login.
+
 wandb login b47938fa5bae1f5b435dfa32a2aa5552ceaad5c6
+
+echo Should have logged in now.
 
 # Run split script
 ${EXE_PYTHON} $BASE_DIR/$PY_SCRIPT \
