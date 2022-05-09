@@ -74,6 +74,7 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
     if USE_WANDB:
         wandb.login(key="b47938fa5bae1f5b435dfa32a2aa5552ceaad5c6")
         config = {
+            'log_dir': log_dir,
             'batch_size': batch_size,
             'seq_length': seq_length,
             'lr': lr,
@@ -117,12 +118,25 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-
     parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
     parser.add_argument('--train_split', type=str, required=True, help='Path to the file that contains the training split text file.')
     parser.add_argument('--val_split', type=str, required=True, help='Path to the file that contains the validation split text file.')
+    parser.add_argument('--log_dir', type=str, required=True, help='String for where the models will be saved.')
+    parser.add_argument("-n", "--num_epochs", type=int, default=50, help="Number of epochs for training.")
+    parser.add_argument("-b", "--batch_size", type=int, default=16, help="Batch size for training.")
+    parser.add_argument("--eval_interval", type=int, default=1, help="How often to evaluate on validation set.")
+    parser.add_argument("--save_interval", type=int, default=1, help="How often to save model.")
     args = parser.parse_args()
 
     # Run training loop
-    main('sara_cluster', num_epochs = 50, batch_size = 16, seq_length = 10,
-         grad_clip=None, lr = 1e-4, eval_interval = 1, save_interval=1, data_root_dir=args.data_dir, train_split=args.train_split, val_split=args.val_split)
+    main(log_dir=args.log_dir, 
+         num_epochs = args.num_epochs, 
+         batch_size = args.batch_size, 
+         seq_length = 10, 
+         grad_clip=None, 
+         lr = 1e-4, 
+         eval_interval = args.eval_interval, 
+         save_interval=args.save_interval, 
+         data_root_dir=args.data_dir, 
+         train_split=args.train_split, 
+         val_split=args.val_split)

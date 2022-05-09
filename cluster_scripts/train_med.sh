@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo Running shell script that trains network.
+echo Running shell script that trains tiny network.
 
 # Define python version
 EXE_PYTHON=python3
@@ -14,9 +14,11 @@ PY_SCRIPT=train.py
 
 DATA_DIR=/project/learningphysics/tartandrive_trajs
 
-TRAIN_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/small_train.txt
+RUN_NAME=med50
 
-VAL_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/small_val.txt
+TRAIN_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/${RUN_NAME}_train.txt
+
+VAL_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/${RUN_NAME}_val.txt
 
 
 # Install learned_cost_map package
@@ -32,8 +34,12 @@ wandb init -p SARA
 ${EXE_PYTHON} $BASE_DIR/$PY_SCRIPT \
     --data_dir $DATA_DIR \
     --train_split $TRAIN_SPLIT \
-    --val_split $VAL_SPLIT
+    --val_split $VAL_SPLIT \
+    --log_dir $RUN_NAME \
+    --num_epochs 50 \
+    --batch_size 16 \
+    --eval_interval 1 \
+    --save_interval 1
 
-
-echo Training shell script ends.
+echo Training tiny network shell script ends.
 
