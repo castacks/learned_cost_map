@@ -1,3 +1,4 @@
+import argparse
 from collections import OrderedDict
 import numpy as np
 import os
@@ -57,10 +58,12 @@ def get_val_metrics(model, val_loader):
 
 
 def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
-         grad_clip=None, lr = 1e-3, eval_interval = 5, save_interval = 5, saved_model=None):
+         grad_clip=None, lr = 1e-3, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None):
+    if (data_root_dir is None) or (train_split is None) or (val_split is None):
+        raise NotImplementedError()
 
     # os.makedirs('data/'+ log_dir, exist_ok = True)
-    train_loader, val_loader = get_dataloaders(batch_size, seq_length)
+    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split)
 
     model = CostModel(input_channels=8, output_size=1).cuda()
     optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -102,7 +105,7 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
             print(epoch, val_metrics)
 
         if (epoch+1)%save_interval == 0:
-            models_dir = "models"
+            models_dir = os.path.join("models", log_dir)
             if not os.path.exists(models_dir):
                 os.makedirs(models_dir)
             save_dir = os.path.join(models_dir, f"epoch_{epoch+1}.pt")
@@ -112,6 +115,13 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
+    parser.add_argument('--train_split', type=str, required=True, help='Path to the file that contains the training split text file.')
+    parser.add_argument('--val_split', type=str, required=True, help='Path to the file that contains the validation split text file.')
+    args = parser.parse_args()
+
     # Run training loop
-    main('test_run', num_epochs = 20, batch_size = 16, seq_length = 10,
-         grad_clip=None, lr = 1e-3, eval_interval = 1, save_interval=1)
+    main('sara_cluster', num_epochs = 50, batch_size = 16, seq_length = 10,
+         grad_clip=None, lr = 1e-4, eval_interval = 1, save_interval=1, data_root_dir=args.data_dir, train_split=args.train_split, val_split=args.val_split)

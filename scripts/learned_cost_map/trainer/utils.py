@@ -6,10 +6,10 @@ from torchvision import transforms as T
 from learned_cost_map.terrain_utils.terrain_map_tartandrive import TerrainMap, get_local_path
 from learned_cost_map.dataloader.TartanDriveDataset import DatasetBase, data_transform
 
-def get_dataloaders(batch_size, seq_length):
-    data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
-    train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
-    val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split):
+    # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
+    # train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+    # val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
 
     # datatypes = "img0,img1,imgc,disp0,heightmap,rgbmap,cmd,odom,cost,patches,imu"
     # base_mod_lengths = [1,1,1,1,1,1,1,1,1,1,10]
