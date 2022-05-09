@@ -83,7 +83,7 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
         }
         print("Training configuration: ")
         print(config)
-        wandb.init(project="SARA", reinit=True, config=config)
+        wandb.init(project="SARA", reinit=True, config=config, settings=wandb.Settings(start_method='fork'))
 
 
     for epoch in range(num_epochs):
