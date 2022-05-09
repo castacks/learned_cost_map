@@ -65,6 +65,8 @@ RUN sudo pip3 install --no-cache-dir pyyaml gym tabulate
 
 RUN sudo pip3 install --no-cache-dir catkin_pkg wandb
 
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
 
 # entrypoint command
 CMD /bin/bash
