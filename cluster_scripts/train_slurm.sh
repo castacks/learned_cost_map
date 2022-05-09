@@ -5,6 +5,7 @@
 #SBATCH -N 1  # CPU Cores
 #SBATCH -t 1-00:00 # D-HH:MM
 #SBATCH -p gpu # cpu/gpu/dgx
+#SBATCH -w bender 
 #SBATCH --gres=gpu:1
 #SBATCH --mem=65536  # MB
 #SBATCH --job-name=Network_trainer
