@@ -99,7 +99,10 @@ def patches_to_imgs(patches_tensor):
 def main():
     batch_size = 10
     seq_length = 10
-    train_loader, val_loader = get_dataloaders(batch_size, seq_length)
+    data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
+    train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+    val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split)
 
     fig = plt.figure()
     spec = gridspec.GridSpec(ncols=5, nrows=4, figure=fig)
