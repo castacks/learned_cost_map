@@ -72,6 +72,7 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
         model.load_state_dict(torch.load(saved_model))
 
     if USE_WANDB:
+        wandb.login(key="b47938fa5bae1f5b435dfa32a2aa5552ceaad5c6")
         config = {
             'batch_size': batch_size,
             'seq_length': seq_length,
