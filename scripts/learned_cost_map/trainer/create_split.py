@@ -19,11 +19,28 @@ def create_split(num_train, num_val, all_train_fp, all_val_fp, output_dir):
     '''
 
     ## Read in full list of training and validation trajectories
+    
     # Read in training trajectories
+    train_names = []
+    train_lengths = []
+    train_dict = {}
     with open(all_train_fp,'r') as f:
         train_lines = f.readlines()
-    import pdb;pdb.set_trace()
+    ind = 0
+    while ind<len(train_lines):
+        line = train_lines[ind].strip()
+        traj_name, traj_len = line.split(' ')
+        traj_len = int(traj_len)
+        ind += 1
+        frames = []
+        for k in range(traj_len):
+            line = train_lines[ind].strip()
+            frames.append(line)
+            ind += 1
 
+        train_names.append(traj_name)
+        train_lengths.append(traj_len)
+        train_dict[traj_name] = frames
     ## Sort trajectories by length
 
     ## Choose split from within the training trajectories, try to make them balanced by using sorted list
