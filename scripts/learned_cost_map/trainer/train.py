@@ -58,12 +58,13 @@ def get_val_metrics(model, val_loader):
 
 
 def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
-         grad_clip=None, lr = 1e-3, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None):
+         grad_clip=None, lr = 1e-3, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, num_workers=4, shuffle_train=False, shuffle_val=False):
+
     if (data_root_dir is None) or (train_split is None) or (val_split is None):
         raise NotImplementedError()
 
     # os.makedirs('data/'+ log_dir, exist_ok = True)
-    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split)
+    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
 
     model = CostModel(input_channels=8, output_size=1).cuda()
     optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -126,6 +127,10 @@ if __name__ == '__main__':
     parser.add_argument("-b", "--batch_size", type=int, default=16, help="Batch size for training.")
     parser.add_argument("--eval_interval", type=int, default=1, help="How often to evaluate on validation set.")
     parser.add_argument("--save_interval", type=int, default=1, help="How often to save model.")
+    parser.add_argument("--num_workers", type=int, default=4, help="Number of workers for the DataLoader.")
+    parser.add_argument('--shuffle_train', action='store_true', help="Shuffle batches for training in the DataLoader.")
+    parser.add_argument('--shuffle_val', action='store_true', help="Shuffle batches for validation in the DataLoader.")
+    parser.set_defaults(shuffle_train=False, shuffle_val=False)
     args = parser.parse_args()
 
     # Run training loop
@@ -139,4 +144,7 @@ if __name__ == '__main__':
          save_interval=args.save_interval, 
          data_root_dir=args.data_dir, 
          train_split=args.train_split, 
-         val_split=args.val_split)
+         val_split=args.val_split,
+         num_workers=args.num_workers, 
+         shuffle_train=args.shuffle_train, 
+         shuffle_val=args.shuffle_val)

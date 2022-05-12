@@ -6,7 +6,7 @@ from torchvision import transforms as T
 from learned_cost_map.terrain_utils.terrain_map_tartandrive import TerrainMap, get_local_path
 from learned_cost_map.dataloader.TartanDriveDataset import DatasetBase, data_transform
 
-def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split):
+def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val):
     # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
     # train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
     # val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
@@ -36,9 +36,9 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
                           frame_skip = 0, 
                           frame_stride=5)
 
-    train_loader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
+    train_loader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=shuffle_train, num_workers=num_workers, pin_memory=True)
 
-    val_loader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
+    val_loader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=shuffle_val, num_workers=num_workers, pin_memory=True)
 
     return train_loader, val_loader
 
