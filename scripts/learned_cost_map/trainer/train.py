@@ -10,6 +10,7 @@ from learned_cost_map.trainer.model import CostModel
 from learned_cost_map.trainer.utils import *
 
 import wandb
+import time
 
 USE_WANDB = True
 
@@ -28,7 +29,10 @@ def traversability_cost_loss(model, x, y):
 def run_train_epoch(model, train_loader, optimizer, grad_clip = None):
     model.train()
     all_metrics = []
+    time_before = time.time()
     for i, data_dict in enumerate(train_loader):
+        print(f"Took {time.time() - time_before} seconds to load data from dataloader.")
+        
         print(f"Training batch {i}/{len(train_loader)}")
         x, y = preprocess_data(data_dict)
 
@@ -41,6 +45,8 @@ def run_train_epoch(model, train_loader, optimizer, grad_clip = None):
         if grad_clip:
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
         optimizer.step()
+        
+        time_before = time.time()
 
     return avg_dict(all_metrics)
 
