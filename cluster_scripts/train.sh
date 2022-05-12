@@ -50,6 +50,8 @@ ${EXE_PYTHON} $BASE_DIR/$PY_SPLIT \
     --all_val_fp $ALL_VAL_FP \
     --output_dir $OUTPUT_DIR
 
+echo Done creating split
+
 # Run trainer
 ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --data_dir $DATA_DIR \

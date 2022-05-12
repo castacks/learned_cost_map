@@ -4,8 +4,8 @@
 
 #SBATCH -N 1  # CPU Cores
 #SBATCH -t 1-00:00 # D-HH:MM
-#SBATCH -p gpu # cpu/gpu/dgx
-#SBATCH -w bender 
+#SBATCH -p dgx # cpu/gpu/dgx
+#SBATCH -w calculon 
 #SBATCH --gres=gpu:1
 #SBATCH --mem=32768  # MB
 #SBATCH --job-name=train_10
