@@ -48,7 +48,7 @@ ${EXE_PYTHON} $BASE_DIR/$PY_SPLIT \
     --num_val $NUM_VAL \
     --all_train_fp $ALL_TRAIN_FP \
     --all_val_fp $ALL_VAL_FP \
-    --OUTPUT_DIR $OUTPUT_DIR
+    --output_dir $OUTPUT_DIR
 
 # Run trainer
 ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
