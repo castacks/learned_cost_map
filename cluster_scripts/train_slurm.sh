@@ -7,8 +7,8 @@
 #SBATCH -p gpu # cpu/gpu/dgx
 #SBATCH -w bender 
 #SBATCH --gres=gpu:1
-#SBATCH --mem=65536  # MB
-#SBATCH --job-name=Network_trainer
+#SBATCH --mem=32768  # MB
+#SBATCH --job-name=train_10
 #SBATCH -o /home/mguamanc/job_%j.out
 #SBATCH -e /home/mguamanc/job_%j.err
 #SBATCH --mail-type=ALL # BEGIN, END, FAIL, ALL
