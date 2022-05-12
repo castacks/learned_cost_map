@@ -34,7 +34,7 @@ def run_train_epoch(model, train_loader, optimizer, grad_clip = None):
         x, y = preprocess_data(data_dict)
 
         loss, _metric = traversability_cost_loss(model, x, y)
-        print(f"Loss: {loss}")
+        # print(f"Loss: {loss}")
         all_metrics.append(_metric)
         optimizer.zero_grad()
         loss.backward()
@@ -65,7 +65,10 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
         raise NotImplementedError()
 
     # os.makedirs('data/'+ log_dir, exist_ok = True)
+    print("Getting data loaders")
+    time_data = time.time()
     train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
+    print(f"Got data loaders. {time.time()-time_data}")
 
     model = CostModel(input_channels=8, output_size=1).cuda()
     optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -93,11 +96,11 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
         print(f"Training, epoch {epoch}")
         train_time = time.time()
         train_metrics = run_train_epoch(model, train_loader, optimizer, grad_clip)
-        print(f"Training epoch in seconds: {time.time()-train_time}")
+        print(f"Training epoch: {time.time()-train_time} s")
         print(f"Validation, epoch {epoch}")
         val_time = time.time()
         val_metrics = get_val_metrics(model, val_loader)
-        print(f"Validation epoch in seconds: {time.time()-val_time}")
+        print(f"Validation epoch: {time.time()-val_time} s")
 
         #TODO : add plotting code for metrics (required for multiple parts)
         if USE_WANDB:
