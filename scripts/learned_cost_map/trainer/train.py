@@ -29,10 +29,7 @@ def traversability_cost_loss(model, x, y):
 def run_train_epoch(model, train_loader, optimizer, grad_clip = None):
     model.train()
     all_metrics = []
-    time_before = time.time()
     for i, data_dict in enumerate(train_loader):
-        print(f"Took {time.time() - time_before} seconds to load data from dataloader.")
-        
         print(f"Training batch {i}/{len(train_loader)}")
         x, y = preprocess_data(data_dict)
 
@@ -45,8 +42,6 @@ def run_train_epoch(model, train_loader, optimizer, grad_clip = None):
         if grad_clip:
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
         optimizer.step()
-        
-        time_before = time.time()
 
     return avg_dict(all_metrics)
 
@@ -96,9 +91,13 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
 
     for epoch in range(num_epochs):
         print(f"Training, epoch {epoch}")
+        train_time = time.time()
         train_metrics = run_train_epoch(model, train_loader, optimizer, grad_clip)
+        print(f"Training epoch in seconds: {time.time()-train_time}")
         print(f"Validation, epoch {epoch}")
+        val_time = time.time()
         val_metrics = get_val_metrics(model, val_loader)
+        print(f"Validation epoch in seconds: {time.time()-val_time}")
 
         #TODO : add plotting code for metrics (required for multiple parts)
         if USE_WANDB:

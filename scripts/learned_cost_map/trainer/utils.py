@@ -1,12 +1,46 @@
 import numpy as np
-
-
+# import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms as T
 from learned_cost_map.terrain_utils.terrain_map_tartandrive import TerrainMap, get_local_path
 from learned_cost_map.dataloader.TartanDriveDataset import DatasetBase, data_transform
 
-def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val):
+import time
+
+'''
+MultiEpochsDataLoader and _RepeatSampler were taken from here: https://github.com/rwightman/pytorch-image-models/pull/140/files
+'''
+class MultiEpochsDataLoader(DataLoader):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._DataLoader__initialized = False
+        self.batch_sampler = _RepeatSampler(self.batch_sampler)
+        self._DataLoader__initialized = True
+        self.iterator = super().__iter__()
+
+    def __len__(self):
+        return len(self.batch_sampler.sampler)
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield next(self.iterator)
+
+
+class _RepeatSampler(object):
+    """ Sampler that repeats forever.
+    Args:
+        sampler (Sampler)
+    """
+
+    def __init__(self, sampler):
+        self.sampler = sampler
+
+    def __iter__(self):
+        while True:
+            yield from iter(self.sampler)
+
+def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, use_multi_epochs_loader=True):
     # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
     # train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
     # val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
@@ -14,6 +48,8 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
     # datatypes = "img0,img1,imgc,disp0,heightmap,rgbmap,cmd,odom,cost,patches,imu"
     # base_mod_lengths = [1,1,1,1,1,1,1,1,1,1,10]
 
+    print("Inside utils/get_dataloaders")
+    before_time = time.time()
     datatypes = "imgc,heightmap,rgbmap,odom,cost,patches"
     base_mod_lengths = [1,1,1,1,1,1]
     modality_lengths = [seq_length*l for l in base_mod_lengths]
@@ -26,7 +62,6 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
                             imu_freq = 10,
                             frame_skip = 0, 
                             frame_stride=5)
-
     val_set = DatasetBase(val_split,
                           dataroot= data_root_dir,
                           datatypes = datatypes,
@@ -36,9 +71,15 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
                           frame_skip = 0, 
                           frame_stride=5)
 
-    train_loader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=shuffle_train, num_workers=num_workers, pin_memory=True)
+    if use_multi_epochs_loader:
+        loader_class = MultiEpochsDataLoader
+    else:
+        loader_class = DataLoader
 
-    val_loader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=shuffle_val, num_workers=num_workers, pin_memory=True)
+    
+    train_loader = loader_class(dataset=train_set, batch_size=batch_size, shuffle=shuffle_train, num_workers=num_workers, pin_memory=True)
+
+    val_loader = loader_class(dataset=val_set, batch_size=batch_size, shuffle=shuffle_val, num_workers=num_workers, pin_memory=True)
 
     return train_loader, val_loader
 

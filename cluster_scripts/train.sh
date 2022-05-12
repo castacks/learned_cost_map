@@ -13,8 +13,8 @@ BASE_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/train
 
 # Variables for generating data split:
 PY_SPLIT=create_split.py
-NUM_TRAIN=10
-NUM_VAL=10
+NUM_TRAIN=30
+NUM_VAL=30
 ALL_TRAIN_FP=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/tartandrive_train.txt
 ALL_VAL_FP=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/tartandrive_val.txt
 OUTPUT_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits
@@ -29,7 +29,7 @@ NUM_EPOCHS=50
 BATCH_SIZE=16
 EVAL_INTERVAL=1
 SAVE_INTERVAL=1
-NUM_WORKERS=4
+NUM_WORKERS=10
 
 
 

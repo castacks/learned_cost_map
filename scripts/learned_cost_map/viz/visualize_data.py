@@ -94,12 +94,15 @@ def patches_to_imgs(patches_tensor):
     return rgb_maps, height_maps
 
 def main():
-    batch_size = 1
+    batch_size = 2
     seq_length = 10
     data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
     train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
     val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
-    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split)
+    num_workers = 4
+    shuffle_train = False
+    shuffle_val = False
+    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
 
     fig = plt.figure()
     spec = gridspec.GridSpec(ncols=10, nrows=4, figure=fig)
