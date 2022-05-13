@@ -61,8 +61,8 @@ class DatasetBase(Dataset):
         if 'cmd' in self.datatypelist:
             self.cmdlist = self.loadDataFromFile(self.trajlist, 'cmd/twist.npy')
         if 'odom' in self.datatypelist:
-            # self.odomlist = self.loadDataFromFile(self.trajlist, 'odom/odometry.npy')
-            self.odomlist = self.loadDataFromFile(self.trajlist, 'tartanvo_odom/poses.npy')
+            self.odomlist = self.loadDataFromFile(self.trajlist, 'odom/odometry.npy')
+            # self.odomlist = self.loadDataFromFile(self.trajlist, 'tartanvo_odom/poses.npy')
         if 'imu' in self.datatypelist:
             self.imulist = self.loadDataFromFile(self.trajlist, 'imu/imu.npy')
         if 'cost' in self.datatypelist:
@@ -284,7 +284,8 @@ class DatasetBase(Dataset):
         map_height = 12.0 # [m]
         map_width  = 12.0 # [m]
         resolution = 0.02
-        origin     = [-2.0, -6.0]
+        # origin     = [-2.0, -6.0]
+        origin     = [-6.0, -2.0]
 
         crop_width = 2.0  # in meters
         crop_size = [crop_width, crop_width]

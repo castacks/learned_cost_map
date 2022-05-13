@@ -94,8 +94,8 @@ def patches_to_imgs(patches_tensor):
     return rgb_maps, height_maps
 
 def main():
-    batch_size = 2
-    seq_length = 10
+    batch_size = 10
+    seq_length = 1
     data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
     train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
     val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
@@ -113,6 +113,7 @@ def main():
 
 
     # img_viewer = fig.add_subplot(111, projection="3d")
+    # import pdb;pdb.set_trace()
     for i, data_dict in enumerate(train_loader):
         # Plot RGB front facing image
         color_img_tensor = data_dict["imgc"][0,0]
@@ -146,7 +147,7 @@ def main():
         for i, mask in enumerate(masks):
             cost = int(costs[i]*255)
             pixel_list = mask.view(-1, 2)
-            empty_map[pixel_list[:,1], pixel_list[:,0]] = cost
+            empty_map[pixel_list[:,0], pixel_list[:,1]] = cost
 
         empty_map = empty_map.cpu().numpy()
 

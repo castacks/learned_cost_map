@@ -150,26 +150,32 @@ def main():
                 'height': 12.0,
                 'width': 12.0,
                 'resolution': 0.02,
-                'origin': [-2.0, -6.0]
+                # 'origin': [-2.0, -6.0]
+                'origin': [-6.0, -2.0]
             }
         path_pix_x, path_pix_y = local_path_to_pixels(local_path, map_metadata)
         gt_costmap = torch.zeros(rgb_map_array.shape[:-1])
         pred_costmap = torch.zeros(rgb_map_array.shape[:-1])
 
 
-        for i, mask in enumerate(masks):
-            gt_cost = int(costs[i]*255)
-            pred_cost = int(pred_costs[i]*255)
+        for j, mask in enumerate(masks):
+            gt_cost = int(costs[j]*255)
+            pred_cost = int(pred_costs[j]*255)
             pixel_list = mask.view(-1, 2)
-            gt_costmap[pixel_list[:,1], pixel_list[:,0]] = gt_cost
-            pred_costmap[pixel_list[:,1], pixel_list[:,0]] = pred_cost
-
-        gt_costmap[path_pix_y, path_pix_x] = 255 # TODO: Change to known cost value
-        pred_costmap[path_pix_y, path_pix_x] = 255 # TODO: Change to known cost value
+            # gt_costmap[pixel_list[:,1], pixel_list[:,0]] = gt_cost
+            # pred_costmap[pixel_list[:,1], pixel_list[:,0]] = pred_cost
+            gt_costmap[pixel_list[:,0], pixel_list[:,1]] = gt_cost
+            pred_costmap[pixel_list[:,0], pixel_list[:,1]] = pred_cost
 
         print(f"Path pixels:")
         print(path_pix_x)
         print(path_pix_y)
+
+        # gt_costmap[path_pix_y, path_pix_x] = 255 # TODO: Change to known cost value
+        # pred_costmap[path_pix_y, path_pix_x] = 255 # TODO: Change to known cost value 
+
+        gt_costmap[path_pix_x, path_pix_y] = 255 # TODO: Change to known cost value
+        pred_costmap[path_pix_x, path_pix_y] = 255 # TODO: Change to known cost value
 
         gt_costmap = gt_costmap.cpu().numpy().astype(np.uint8)
         pred_costmap = pred_costmap.cpu().numpy().astype(np.uint8)
@@ -179,12 +185,12 @@ def main():
         rgb_map_ax.clear()
 
 
-        for i,patch in enumerate(rgb_maps):
-            patches_axs[i].clear()
-            patches_axs[i].imshow(patch, origin="lower")
-            cost = costs[i]
-            pred_cost = pred_costs[i]
-            patches_axs[i].set_title(f"GT Cost: {cost:.2f}\nPred Cost: {pred_cost:.2f}")
+        for j,patch in enumerate(rgb_maps):
+            patches_axs[j].clear()
+            patches_axs[j].imshow(patch, origin="lower")
+            cost = costs[j]
+            pred_cost = pred_costs[j]
+            patches_axs[j].set_title(f"GT Cost: {cost:.2f}\nPred Cost: {pred_cost:.2f}")
 
         gt_costmap_ax.imshow(gt_costmap, origin="lower", vmin=0.0, vmax=255.0)
         gt_costmap_ax.set_title("Ground truth costmap")
@@ -196,7 +202,7 @@ def main():
         plt.subplots_adjust(wspace=1.5)
         if i == 0:
             plt.pause(5)
-        plt.pause(0.1)
+        plt.pause(5)
 
 if __name__=="__main__":
     main()
