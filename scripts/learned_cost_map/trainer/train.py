@@ -26,15 +26,16 @@ def traversability_cost_loss(model, x, y):
 
     return loss, OrderedDict(loss=loss, random_loss=random_loss)
 
-def run_train_epoch(model, train_loader, optimizer, grad_clip = None):
+def run_train_epoch(model, train_loader, optimizer, scheduler, grad_clip = None):
     model.train()
     all_metrics = []
+    curr_lr = scheduler.get_last_lr()
     for i, data_dict in enumerate(train_loader):
         print(f"Training batch {i}/{len(train_loader)}")
         x, y = preprocess_data(data_dict)
 
         loss, _metric = traversability_cost_loss(model, x, y)
-        # print(f"Loss: {loss}")
+        _metric["lr"] = curr_lr
         all_metrics.append(_metric)
         optimizer.zero_grad()
         loss.backward()
@@ -42,7 +43,7 @@ def run_train_epoch(model, train_loader, optimizer, grad_clip = None):
         if grad_clip:
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
         optimizer.step()
-
+    scheduler.step()
     return avg_dict(all_metrics)
 
 def get_val_metrics(model, val_loader):
@@ -58,8 +59,8 @@ def get_val_metrics(model, val_loader):
     return avg_dict(all_metrics)
 
 
-def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
-         grad_clip=None, lr = 1e-3, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, num_workers=4, shuffle_train=False, shuffle_val=False):
+def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
+         grad_clip=None, lr = 1e-3, gamma=0.95, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False):
 
     if (data_root_dir is None) or (train_split is None) or (val_split is None):
         raise NotImplementedError()
@@ -70,8 +71,13 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
     train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
     print(f"Got data loaders. {time.time()-time_data}")
 
-    model = CostModel(input_channels=8, output_size=1).cuda()
+    model = CostModel(input_channels=8, output_size=1)
+    if multiple_gpus and torch.cuda.device_count() > 1:
+        print("Using up to ", torch.cuda.device_count(), "GPUs!")
+        model = nn.DataParallel(model)
+    model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=lr)
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma)
 
     if saved_model is not None:
         model.load_state_dict(torch.load(saved_model))
@@ -95,7 +101,7 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 10,
     for epoch in range(num_epochs):
         print(f"Training, epoch {epoch}")
         train_time = time.time()
-        train_metrics = run_train_epoch(model, train_loader, optimizer, grad_clip)
+        train_metrics = run_train_epoch(model, train_loader, optimizer, scheduler, grad_clip)
         print(f"Training epoch: {time.time()-train_time} s")
         print(f"Validation, epoch {epoch}")
         val_time = time.time()
@@ -133,21 +139,27 @@ if __name__ == '__main__':
     parser.add_argument('--log_dir', type=str, required=True, help='String for where the models will be saved.')
     parser.add_argument("-n", "--num_epochs", type=int, default=50, help="Number of epochs for training.")
     parser.add_argument("-b", "--batch_size", type=int, default=16, help="Batch size for training.")
+    parser.add_argument("--seq_length", type=int, default=1, help="Length of sequence used for training. See TartanDriveDataset for more details.")
+    parser.add_argument('--grad_clip', type=float, help='Max norm of gradients. Leave blank for no grad clipping')
+    parser.add_argument('-lr', '--learning_rate', type=float, default=1e-3, help='Initial learning rate.')
+    parser.add_argument('--gamma', type=float, default=1.0, help="Value by which learning rate will be decreased at every epoch.")
     parser.add_argument("--eval_interval", type=int, default=1, help="How often to evaluate on validation set.")
     parser.add_argument("--save_interval", type=int, default=1, help="How often to save model.")
     parser.add_argument("--num_workers", type=int, default=4, help="Number of workers for the DataLoader.")
     parser.add_argument('--shuffle_train', action='store_true', help="Shuffle batches for training in the DataLoader.")
     parser.add_argument('--shuffle_val', action='store_true', help="Shuffle batches for validation in the DataLoader.")
-    parser.set_defaults(shuffle_train=False, shuffle_val=False)
+    parser.add_argument('--multiple_gpus', action='store_true', help="Use multiple GPUs if they are available.")
+    parser.set_defaults(shuffle_train=False, shuffle_val=False, multiple_gpus=False)
     args = parser.parse_args()
 
     # Run training loop
     main(log_dir=args.log_dir, 
          num_epochs = args.num_epochs, 
          batch_size = args.batch_size, 
-         seq_length = 10, 
-         grad_clip=None, 
-         lr = 1e-4, 
+         seq_length = args.seq_length, 
+         grad_clip=args.grad_clip, 
+         lr = args.learning_rate,
+         gamma=args.gamma, 
          eval_interval = args.eval_interval, 
          save_interval=args.save_interval, 
          data_root_dir=args.data_dir, 
@@ -155,4 +167,6 @@ if __name__ == '__main__':
          val_split=args.val_split,
          num_workers=args.num_workers, 
          shuffle_train=args.shuffle_train, 
-         shuffle_val=args.shuffle_val)
+         shuffle_val=args.shuffle_val,
+         multiple_gpus=args.multiple_gpus
+         )
