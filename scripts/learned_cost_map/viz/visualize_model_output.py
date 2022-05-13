@@ -98,7 +98,7 @@ def patches_to_imgs(patches_tensor):
 
 def main():
     batch_size = 10
-    seq_length = 10
+    seq_length = 1
     data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
     train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
     val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
@@ -120,7 +120,6 @@ def main():
     model.eval()
 
     for i, data_dict in enumerate(train_loader):
-        # import pdb;pdb.set_trace()
         # Get cost from neural net
         x, y = preprocess_data(data_dict)
         pred_costs = model(x).detach().cpu().squeeze()

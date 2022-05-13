@@ -51,7 +51,7 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
     print("Inside utils/get_dataloaders")
     before_time = time.time()
     datatypes = "imgc,heightmap,rgbmap,odom,cost,patches"
-    base_mod_lengths = [1,1,1,1,1,1]
+    base_mod_lengths = [1,1,1,10,10,1]
     modality_lengths = [seq_length*l for l in base_mod_lengths]
 
     train_set = DatasetBase(train_split,
