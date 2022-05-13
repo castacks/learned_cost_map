@@ -29,13 +29,13 @@ def traversability_cost_loss(model, x, y):
 def run_train_epoch(model, train_loader, optimizer, scheduler, grad_clip = None):
     model.train()
     all_metrics = []
-    curr_lr = scheduler.get_last_lr()
+    curr_lr = scheduler.get_last_lr()[0]
     for i, data_dict in enumerate(train_loader):
         print(f"Training batch {i}/{len(train_loader)}")
         x, y = preprocess_data(data_dict)
 
         loss, _metric = traversability_cost_loss(model, x, y)
-        _metric["lr"] = curr_lr
+        _metric["lr"] = torch.Tensor([curr_lr])
         all_metrics.append(_metric)
         optimizer.zero_grad()
         loss.backward()
@@ -151,6 +151,9 @@ if __name__ == '__main__':
     parser.add_argument('--multiple_gpus', action='store_true', help="Use multiple GPUs if they are available.")
     parser.set_defaults(shuffle_train=False, shuffle_val=False, multiple_gpus=False)
     args = parser.parse_args()
+
+    print(f"grad_clip is {args.grad_clip}")
+    print(f"learning rate is {args.learning_rate}")
 
     # Run training loop
     main(log_dir=args.log_dir, 
