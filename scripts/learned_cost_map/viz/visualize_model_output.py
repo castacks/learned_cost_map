@@ -163,7 +163,7 @@ def main():
             pred_cost = int(pred_costs[i]*255)
             pixel_list = mask.view(-1, 2)
             gt_costmap[pixel_list[:,1], pixel_list[:,0]] = gt_cost
-            pred_costmap[pixel_list[:,1], pixel_list[:,0]] = cost
+            pred_costmap[pixel_list[:,1], pixel_list[:,0]] = pred_cost
 
         gt_costmap[path_pix_y, path_pix_x] = 255 # TODO: Change to known cost value
         pred_costmap[path_pix_y, path_pix_x] = 255 # TODO: Change to known cost value
