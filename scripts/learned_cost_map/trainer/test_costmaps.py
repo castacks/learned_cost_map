@@ -87,7 +87,13 @@ def produce_costmap(model, maps, map_metadata, crop_params):
 
 def main(batch_size = 256, seq_length = 10, saved_model=None):
     # Set up dataloaders to visualize costmaps
-    train_loader, val_loader = get_dataloaders(batch_size, seq_length)
+    data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
+    train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+    val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+    num_workers = 1
+    shuffle_train = False
+    shuffle_val = False
+    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
 
     # Load trained model to produce costmaps
     model = CostModel(input_channels=8, output_size=1).cuda()
@@ -98,7 +104,8 @@ def main(batch_size = 256, seq_length = 10, saved_model=None):
     map_height = 12.0 # [m]
     map_width  = 12.0 # [m]
     resolution = 0.02
-    origin     = [-2.0, -6.0]
+    # origin     = [-2.0, -6.0]
+    origin     = [-6.0, -2.0]
 
     map_metadata = {
         'height': map_height,
@@ -148,5 +155,6 @@ def main(batch_size = 256, seq_length = 10, saved_model=None):
 
 if __name__ == '__main__':
     # Run training loop
-    saved_model = "models/epoch_20.pt"
-    main(batch_size = 1, seq_length = 10, saved_model=saved_model)
+    # saved_model = "models/epoch_20.pt"
+    saved_model = "/home/mateo/models/train500/epoch_35.pt"
+    main(batch_size = 1, seq_length = 1, saved_model=saved_model)
