@@ -211,12 +211,14 @@ def FourierFeatureMapping(data, B):
         - fourier_data:
             Tensor of size (2*K*num_features,) correspoding to gamma(data) = [cos(2*pi*B*data), sin(2*pi*B*data)] where B is obtained using get_FFM_freqs
     '''
-    # Reshape B so that it can be used with batch matrix multiplication
+    # import pdb;pdb.set_trace()
+    # Reshape data and B so that they can be batch matrix multiplied
     if len(data.shape) > 1:
-        B = B.view(1,-1)  
+        data = data.view(*data.shape, 1)
+        B = B.view(1, *B.shape)  
 
-    data_cos = torch.cos(2*torch.pi*torch.matmul(B,data))
-    data_sin = torch.sin(2*torch.pi*torch.matmul(B,data))
+    data_cos = torch.cos(2*torch.pi*torch.matmul(B,data)).squeeze()
+    data_sin = torch.sin(2*torch.pi*torch.matmul(B,data)).squeeze()
 
     fourier_data = torch.cat([data_cos, data_sin], dim=-1)
 
