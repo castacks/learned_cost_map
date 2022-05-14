@@ -1,5 +1,5 @@
 import numpy as np
-# import torch
+import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms as T
 from learned_cost_map.terrain_utils.terrain_map_tartandrive import TerrainMap, get_local_path
@@ -180,3 +180,43 @@ def patches_to_imgs(patches_tensor):
     height_maps = np.stack(height_maps, axis=0)
 
     return rgb_maps, height_maps
+
+def get_FFM_freqs(data_size, scale=10.0, num_features=16):
+    '''Get frequencies to be used for Fourier Feature Mapping (https://arxiv.org/abs/2006.10739) based on dimensionality of data and scale. These frequencies will be fixed during training time.
+
+    Args:
+        - data_size:
+            Int, K representing the dimensionality of the input data
+        - scale:
+            Float, scale by which a random variable sampled from a standard Gaussian will be scaled.
+    Returns:
+        - B:
+            Tensor of size (num_features, K). This will be used as [cos(2pi*B*data), sin(2pi*B*data)] in FourierFeatureMapping
+    '''
+    B = torch.normal(mean=0, std=1, size=(num_features, data_size)) * scale
+
+    return B
+
+
+
+def FourierFeatureMapping(data, B):
+    '''Performs Fourier Feature Mapping as described in https://arxiv.org/abs/2006.10739
+
+    Args:
+        - data:
+            Tensor of size (batch, K), where K is the dimensionality of the data
+        - B:
+            Tensor of size (num_features, K). This will be used as [cos(2pi*B*data), sin(2pi*B*data)] in FourierFeatureMapping 
+    Returns:
+        - fourier_data:
+            Tensor of size (2*K*num_features,) correspoding to gamma(data) = [cos(2*pi*B*data), sin(2*pi*B*data)] where B is obtained using get_FFM_freqs
+    '''
+    # Reshape B so that it can be used with batch matrix multiplication
+    B = B.view(1,-1)  
+
+    data_cos = torch.cos(2*torch.pi*torch.matmul(B,data))
+    data_sin = torch.sin(2*torch.pi*torch.matmul(B,data))
+
+    fourier_data = torch.cat([data_cos, data_sin], dim=-1)
+
+    return fourier_data
