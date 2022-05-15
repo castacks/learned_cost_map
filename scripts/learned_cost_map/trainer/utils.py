@@ -145,7 +145,6 @@ def preprocess_data(input_dict, fourier_freqs=None):
         - labels:
             A tensor of pseudo ground-truth labels
     '''
-    import pdb;pdb.set_trace()
     input_data = {}
     input_data["patches"] = input_dict["patches"].view(-1, *input_dict["patches"].shape[-3:]).to('cuda')
     
