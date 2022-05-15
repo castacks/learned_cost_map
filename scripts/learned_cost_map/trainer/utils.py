@@ -149,8 +149,8 @@ def preprocess_data(input_dict, fourier_freqs=None):
     input_data = {}
     input_data["patches"] = input_dict["patches"].view(-1, *input_dict["patches"].shape[-3:]).to('cuda')
     
-    odom_tensor = input_dict["odom"][0] # TODO: Is this [0] necessary?
-    vels = torch.linalg.norm(odom_tensor[:,7:10], dim=1).to('cuda')
+    odom_tensor = input_dict["odom"]
+    vels = torch.linalg.norm(odom_tensor[...,7:10], dim=-1).view(-1).to('cuda')
     input_data["vels"] = vels
 
     if fourier_freqs is not None:
