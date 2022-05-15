@@ -12,7 +12,8 @@ class CostModel(nn.Module):
 
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x):
+    def forward(self, input_data):
+        x = input_data["patches"]
         output = self.model(x)
         output = self.sigmoid(output)
         return output
@@ -35,11 +36,13 @@ class CostVelModel(nn.Module):
         ])
 
         self.output_mlp = nn.Sequential([
-            nn.Linear(in_features=1024, out_features=output_size)
+            nn.Linear(in_features=embedding_size+512, out_features=output_size)
         ])
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x, vel):
+    def forward(self, input_data):
+        x = input_data["patches"]
+        vel = input_data["vels"]
         processed_maps = self.model(x)
         processed_vel  = self.vel_mlp(vel)
         combined_features = torch.cat(processed_maps, processed_vel)
@@ -65,11 +68,13 @@ class CostFourierVelModel(nn.Module):
         ])
 
         self.output_mlp = nn.Sequential([
-            nn.Linear(in_features=1024, out_features=output_size)
+            nn.Linear(in_features=embedding_size+512, out_features=output_size)
         ])
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x, vel):
+    def forward(self, input_data):
+        x = input_data["patches"]
+        vel = input_data["fourier_vels"]
         processed_maps = self.model(x)
         processed_vel  = self.vel_mlp(vel)
         combined_features = torch.cat(processed_maps, processed_vel)

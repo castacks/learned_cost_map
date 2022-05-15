@@ -40,6 +40,49 @@ class _RepeatSampler(object):
         while True:
             yield from iter(self.sampler)
 
+def get_FFM_freqs(data_size, scale=10.0, num_features=16):
+    '''Get frequencies to be used for Fourier Feature Mapping (https://arxiv.org/abs/2006.10739) based on dimensionality of data and scale. These frequencies will be fixed during training time.
+
+    Args:
+        - data_size:
+            Int, K representing the dimensionality of the input data
+        - scale:
+            Float, scale by which a random variable sampled from a standard Gaussian will be scaled.
+    Returns:
+        - B:
+            Tensor of size (num_features, K). This will be used as [cos(2pi*B*data), sin(2pi*B*data)] in FourierFeatureMapping
+    '''
+    B = torch.normal(mean=0, std=1, size=(num_features, data_size)) * scale
+
+    return B
+
+
+
+def FourierFeatureMapping(data, B):
+    '''Performs Fourier Feature Mapping as described in https://arxiv.org/abs/2006.10739
+
+    Args:
+        - data:
+            Tensor of size (batch, K), where K is the dimensionality of the data
+        - B:
+            Tensor of size (num_features, K) of Fourier frequencies. This will be used as [cos(2pi*B*data), sin(2pi*B*data)] in FourierFeatureMapping 
+    Returns:
+        - fourier_data:
+            Tensor of size (2*K*num_features,) correspoding to gamma(data) = [cos(2*pi*B*data), sin(2*pi*B*data)] where B is obtained using get_FFM_freqs
+    '''
+    # import pdb;pdb.set_trace()
+    # Reshape data and B so that they can be batch matrix multiplied
+    if len(data.shape) > 1:
+        data = data.view(*data.shape, 1)
+        B = B.view(1, *B.shape)  
+
+    data_cos = torch.cos(2*torch.pi*torch.matmul(B,data)).squeeze()
+    data_sin = torch.sin(2*torch.pi*torch.matmul(B,data)).squeeze()
+
+    fourier_data = torch.cat([data_cos, data_sin], dim=-1)
+
+    return fourier_data
+
 def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, use_multi_epochs_loader=True):
     # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
     # train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
@@ -83,10 +126,41 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
 
     return train_loader, val_loader
 
-def preprocess_data(input_dict):
-    x = input_dict["patches"].view(-1, *input_dict["patches"].shape[-3:])
-    y = input_dict["cost"].view(-1)
-    return x.to('cuda'), y.to('cuda')
+def preprocess_data(input_dict, fourier_freqs=None):
+    '''Returns input dictionary and labels.
+
+    Args:
+        - input_dict:
+            Dictionary loaded from the dataloader
+        - fourier_freqs:
+            Tensor B of frequencies for Fourier feature mapping of input veocities
+    Returns:
+        - input_data:
+            Dictionary with the following fields:
+                {
+                    'patches',
+                    'vels',
+                    'fourier_vels'
+                }
+        - labels:
+            A tensor of pseudo ground-truth labels
+    '''
+    import pdb;pdb.set_trace()
+    input_data = {}
+    input_data["patches"] = input_dict["patches"].view(-1, *input_dict["patches"].shape[-3:]).to('cuda')
+    
+    odom_tensor = input_dict["odom"][0] # TODO: Is this [0] necessary?
+    vels = torch.linalg.norm(odom_tensor[:,7:10], dim=1).to('cuda')
+    input_data["vels"] = vels
+
+    if fourier_freqs is not None:
+        input_data['fourier_vels'] = FourierFeatureMapping(vels, fourier_freqs).to('cuda')
+    else:
+        input_data["fourier_vels"] = None
+
+
+    labels = input_dict["cost"].view(-1).to('cuda')
+    return input_data, labels
 
 def avg_dict(all_metrics):
     keys = all_metrics[0].keys()
@@ -183,45 +257,4 @@ def patches_to_imgs(patches_tensor):
 
     return rgb_maps, height_maps
 
-def get_FFM_freqs(data_size, scale=10.0, num_features=16):
-    '''Get frequencies to be used for Fourier Feature Mapping (https://arxiv.org/abs/2006.10739) based on dimensionality of data and scale. These frequencies will be fixed during training time.
 
-    Args:
-        - data_size:
-            Int, K representing the dimensionality of the input data
-        - scale:
-            Float, scale by which a random variable sampled from a standard Gaussian will be scaled.
-    Returns:
-        - B:
-            Tensor of size (num_features, K). This will be used as [cos(2pi*B*data), sin(2pi*B*data)] in FourierFeatureMapping
-    '''
-    B = torch.normal(mean=0, std=1, size=(num_features, data_size)) * scale
-
-    return B
-
-
-
-def FourierFeatureMapping(data, B):
-    '''Performs Fourier Feature Mapping as described in https://arxiv.org/abs/2006.10739
-
-    Args:
-        - data:
-            Tensor of size (batch, K), where K is the dimensionality of the data
-        - B:
-            Tensor of size (num_features, K). This will be used as [cos(2pi*B*data), sin(2pi*B*data)] in FourierFeatureMapping 
-    Returns:
-        - fourier_data:
-            Tensor of size (2*K*num_features,) correspoding to gamma(data) = [cos(2*pi*B*data), sin(2*pi*B*data)] where B is obtained using get_FFM_freqs
-    '''
-    # import pdb;pdb.set_trace()
-    # Reshape data and B so that they can be batch matrix multiplied
-    if len(data.shape) > 1:
-        data = data.view(*data.shape, 1)
-        B = B.view(1, *B.shape)  
-
-    data_cos = torch.cos(2*torch.pi*torch.matmul(B,data)).squeeze()
-    data_sin = torch.sin(2*torch.pi*torch.matmul(B,data)).squeeze()
-
-    fourier_data = torch.cat([data_cos, data_sin], dim=-1)
-
-    return fourier_data

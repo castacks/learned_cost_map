@@ -5,7 +5,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from learned_cost_map.trainer.model import CostModel
+from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel
 
 from learned_cost_map.trainer.utils import *
 
@@ -14,27 +14,27 @@ import time
 
 USE_WANDB = True
 
-def traversability_cost_loss(model, x, y):
-    pred_cost = model(x)
+def traversability_cost_loss(model, input, labels):
+    pred_cost = model(input)
     criterion = nn.MSELoss(reduction="sum")
     pred_cost = pred_cost.squeeze()
     # Get loss averaged accross batch
-    loss = criterion(pred_cost, y)/pred_cost.shape[0]
+    loss = criterion(pred_cost, labels)/pred_cost.shape[0]
 
     random_cost = torch.rand(pred_cost.shape).cuda()
-    random_loss = criterion(random_cost, y)/random_cost.shape[0]
+    random_loss = criterion(random_cost, labels)/random_cost.shape[0]
 
     return loss, OrderedDict(loss=loss, random_loss=random_loss)
 
-def run_train_epoch(model, train_loader, optimizer, scheduler, grad_clip = None):
+def run_train_epoch(model, train_loader, optimizer, scheduler, grad_clip=None, fourier_freqs=None):
     model.train()
     all_metrics = []
     curr_lr = scheduler.get_last_lr()[0]
     for i, data_dict in enumerate(train_loader):
         print(f"Training batch {i}/{len(train_loader)}")
-        x, y = preprocess_data(data_dict)
+        input, labels = preprocess_data(data_dict)
 
-        loss, _metric = traversability_cost_loss(model, x, y)
+        loss, _metric = traversability_cost_loss(model, input, labels)
         _metric["lr"] = torch.Tensor([curr_lr])
         all_metrics.append(_metric)
         optimizer.zero_grad()
@@ -46,7 +46,7 @@ def run_train_epoch(model, train_loader, optimizer, scheduler, grad_clip = None)
     scheduler.step()
     return avg_dict(all_metrics)
 
-def get_val_metrics(model, val_loader):
+def get_val_metrics(model, val_loader, fourier_freqs=None):
     model.eval()
     all_metrics = []
     with torch.no_grad():
@@ -59,19 +59,31 @@ def get_val_metrics(model, val_loader):
     return avg_dict(all_metrics)
 
 
-def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
-         grad_clip=None, lr = 1e-3, gamma=0.95, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False):
+def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
+         grad_clip=None, lr = 1e-3, gamma=1, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False):
 
     if (data_root_dir is None) or (train_split is None) or (val_split is None):
         raise NotImplementedError()
 
-    # os.makedirs('data/'+ log_dir, exist_ok = True)
+    ## Obtain DataLoaders
     print("Getting data loaders")
     time_data = time.time()
     train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
     print(f"Got data loaders. {time.time()-time_data}")
 
-    model = CostModel(input_channels=8, output_size=1)
+    ## Set up model
+    if model_name=="CostModel":
+        model = CostModel(input_channels=8, output_size=1)
+        fourier_freqs = None
+    elif model_name=="CostVelModel":
+        model = CostVelModel(input_channels=8, embedding_size=512, output_size=1)
+        fourier_freqs = None
+    elif model_name=="CostFourierVelModel":
+        model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+        fourier_freqs = get_FFM_freqs(1, scale=10.0, num_features=16)
+    else:
+        raise NotImplementedError()
+    
     if multiple_gpus and torch.cuda.device_count() > 1:
         print("Using up to ", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
@@ -85,10 +97,12 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
     if USE_WANDB:
         wandb.login(key="b47938fa5bae1f5b435dfa32a2aa5552ceaad5c6")
         config = {
+            'model_name': model_name,
             'log_dir': log_dir,
             'batch_size': batch_size,
             'seq_length': seq_length,
             'lr': lr,
+            'gamma':gamma,
             'grad_clip': grad_clip,
             'num_epochs': num_epochs,
             'eval_interval': eval_interval
@@ -101,11 +115,11 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
     for epoch in range(num_epochs):
         print(f"Training, epoch {epoch}")
         train_time = time.time()
-        train_metrics = run_train_epoch(model, train_loader, optimizer, scheduler, grad_clip)
+        train_metrics = run_train_epoch(model, train_loader, optimizer, scheduler, grad_clip, fourier_freqs)
         print(f"Training epoch: {time.time()-train_time} s")
         print(f"Validation, epoch {epoch}")
         val_time = time.time()
-        val_metrics = get_val_metrics(model, val_loader)
+        val_metrics = get_val_metrics(model, val_loader, fourier_freqs)
         print(f"Validation epoch: {time.time()-val_time} s")
 
         #TODO : add plotting code for metrics (required for multiple parts)
@@ -126,6 +140,9 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
             if not os.path.exists(models_dir):
                 os.makedirs(models_dir)
             save_dir = os.path.join(models_dir, f"epoch_{epoch+1}.pt")
+            if fourier_freqs is not None:
+                freqs_dir = os.path.join(models_dir, f"fourier_freqs.pt")
+                torch.save(fourier_freqs.cpu(), freqs_dir)
             torch.save(model.state_dict(), save_dir)
 
 
@@ -133,6 +150,7 @@ def main(log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--model', choices=['CostModel', 'CostVelModel', 'CostFourierVelModel'], default='CostModel')
     parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
     parser.add_argument('--train_split', type=str, required=True, help='Path to the file that contains the training split text file.')
     parser.add_argument('--val_split', type=str, required=True, help='Path to the file that contains the validation split text file.')
@@ -156,7 +174,8 @@ if __name__ == '__main__':
     print(f"learning rate is {args.learning_rate}")
 
     # Run training loop
-    main(log_dir=args.log_dir, 
+    main(model_name=args.model,
+         log_dir=args.log_dir, 
          num_epochs = args.num_epochs, 
          batch_size = args.batch_size, 
          seq_length = args.seq_length, 
