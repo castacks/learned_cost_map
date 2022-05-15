@@ -150,7 +150,7 @@ def preprocess_data(input_dict, fourier_freqs=None):
     input_data["patches"] = input_dict["patches"].view(-1, *input_dict["patches"].shape[-3:]).to('cuda')
     
     odom_tensor = input_dict["odom"]
-    vels = torch.linalg.norm(odom_tensor[...,7:10], dim=-1).view(-1).to('cuda')
+    vels = torch.linalg.norm(odom_tensor[...,7:10], dim=-1).view(-1,1).to('cuda') # view(-1,1) refers to -1 batches, 1 dim for velocity, since it is one dimensional
     #Normalize velocity:
     vels=torch.clamp(vels/20.0, min=0.0, max=1.0)
     input_data["vels"] = vels
