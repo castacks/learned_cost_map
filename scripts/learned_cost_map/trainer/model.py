@@ -59,7 +59,7 @@ class CostFourierVelModel(nn.Module):
         self.model.fc = nn.Linear(in_features=512, out_features=embedding_size, bias=True)
 
         self.vel_mlp = nn.Sequential(
-            nn.Linear(in_features=ff_size, out_features=512),
+            nn.Linear(in_features=ff_size*2, out_features=512),
             nn.ReLU(),
             nn.Linear(in_features=512, out_features=512),
             nn.ReLU(),
