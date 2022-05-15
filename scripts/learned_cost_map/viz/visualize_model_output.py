@@ -114,7 +114,8 @@ def main():
     pred_costmap_ax = fig.add_subplot(spec[2:4,3:5])
     rgb_map_ax = fig.add_subplot(spec[2:4,2])
 
-    saved_model = "/home/mateo/learned_cost_map/scripts/learned_cost_map/trainer/models/epoch_20.pt"
+    # saved_model = "/home/mateo/learned_cost_map/scripts/learned_cost_map/trainer/models/epoch_20.pt"
+    saved_model="/home/mateo/models/train500/epoch_35.pt"
     model = CostModel(input_channels=8, output_size=1).cuda()
     model.load_state_dict(torch.load(saved_model))
     model.eval()

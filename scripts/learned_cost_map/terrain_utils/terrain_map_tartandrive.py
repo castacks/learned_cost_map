@@ -144,6 +144,7 @@ class TerrainMap:
             - crops:
                 Tensor of NxCxHxW of crops at poses on the path, where C is the number of channels in self.maps and N is the number of points in the path
         '''
+        # import pdb;pdb.set_trace()
         ## Create initial crop template in metric space centered around (0,0) to generate all pixel values
         crop_height = crop_params['crop_size'][0] # In meters
         crop_width = crop_params['crop_size'][1] # In meters

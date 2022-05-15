@@ -48,7 +48,9 @@ def produce_costmap(model, maps, map_metadata, crop_params):
     stride = 10
     x_pixels = torch.arange(0, map_height, stride)
     y_pixels = torch.arange(0, map_width, stride)
-    all_poses = torch.stack(torch.meshgrid(x_pixels, y_pixels, indexing="ij"), dim=-1).view(-1, 2)
+    x_poses = x_pixels*map_metadata['resolution']+map_metadata["origin"][0]
+    y_poses = y_pixels*map_metadata['resolution']+map_metadata["origin"][0]
+    all_poses = torch.stack(torch.meshgrid(x_poses, y_poses, indexing="ij"), dim=-1).view(-1, 2)
     # Append orientations
     all_poses = torch.cat([all_poses, torch.zeros(all_poses.shape[0], 1)], dim=-1).to(device).detach()
 
@@ -60,20 +62,31 @@ def produce_costmap(model, maps, map_metadata, crop_params):
 
     all_costs = []
     # Query all map poses from TerrainMap
+    # fig = plt.figure()
+    # front_img_ax = fig.add_subplot(111)
     for b in range(num_batches):
         # if b % 100 == 0:
         #     print(f"Evaluating batch {b}/{num_batches}")
+        # import pdb;pdb.set_trace()
         patches = tm.get_crop_batch(poses=all_poses[batch_starts[b]:batch_ends[b]], crop_params=crop_params)
-
+        # rgb_maps, height_maps = patches_to_imgs(patches)
+        # front_img_ax.clear() 
+        # front_img_ax.imshow(rgb_maps[0])
+        # p = all_poses[batch_starts[b]:batch_ends[b]]
+        # front_img_ax.set_title(f"Element {b}. Looking at pose {p}")
         # Pass all map patches to network
+        # import pdb;pdb.set_trace()
         costs = model(patches).detach()
+        # costs = torch.rand_like(costs)
         all_costs.append(costs.squeeze())
+        # plt.pause(0.1)
     all_costs = torch.cat(all_costs, 0)
     # Reshape cost predictions into costmap
     # import pdb;pdb.set_trace()
     reduced_costmap = all_costs.view(1, 1, x_pixels.shape[0], y_pixels.shape[0])
 
     costmap = torch.nn.functional.interpolate(reduced_costmap, size=(map_height,map_width), mode='bilinear', align_corners=True)
+    # costmap = reduced_costmap 
 
     costmap = costmap.squeeze()
     
@@ -148,9 +161,13 @@ def main(batch_size = 256, seq_length = 10, saved_model=None):
         costmap_ax.clear()
 
         front_img_ax.imshow(color_img_array)
-        rgb_map_ax.imshow(rgb_map_array)
-        costmap_ax.imshow(costmap, vmin=0.0, vmax=1.0)
-
+        front_img_ax.set_title("Front facing image")
+        rgb_map_ax.imshow(rgb_map_array, origin="lower")
+        rgb_map_ax.set_title("RGB map")
+        costmap_ax.imshow(costmap, vmin=0.0, vmax=1.0, cmap="viridis", origin="lower")
+        costmap_ax.set_title("Learned Costmap")
+        if i==0:
+            plt.pause(5)
         plt.pause(0.1)
 
 if __name__ == '__main__':
