@@ -4,8 +4,8 @@
 
 #SBATCH -N 1  # CPU Cores
 #SBATCH -t 3-00:00 # D-HH:MM
-#SBATCH -p dgx # cpu/gpu/dgx
-#SBATCH -w calculon 
+#SBATCH -p gpu # cpu/gpu/dgx
+#SBATCH -w bender 
 #SBATCH --gres=gpu:2
 #SBATCH --mem=32768  # MB
 #SBATCH --job-name=train_CostVelModel
