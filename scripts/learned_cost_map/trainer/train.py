@@ -72,12 +72,11 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
     print(f"Got data loaders. {time.time()-time_data}")
 
     ## Set up model
+    fourier_freqs = None
     if model_name=="CostModel":
         model = CostModel(input_channels=8, output_size=1)
-        fourier_freqs = None
     elif model_name=="CostVelModel":
         model = CostVelModel(input_channels=8, embedding_size=512, output_size=1)
-        fourier_freqs = None
     elif model_name=="CostFourierVelModel":
         model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
         fourier_freqs = get_FFM_freqs(1, scale=10.0, num_features=16)
