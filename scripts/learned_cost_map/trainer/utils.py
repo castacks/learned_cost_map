@@ -151,10 +151,12 @@ def preprocess_data(input_dict, fourier_freqs=None):
     
     odom_tensor = input_dict["odom"]
     vels = torch.linalg.norm(odom_tensor[...,7:10], dim=-1).view(-1).to('cuda')
+    #Normalize velocity:
+    vels=torch.clamp(vels/20.0, min=0.0, max=1.0)
     input_data["vels"] = vels
 
     if fourier_freqs is not None:
-        input_data['fourier_vels'] = FourierFeatureMapping(vels, fourier_freqs).to('cuda')
+        input_data['fourier_vels'] = FourierFeatureMapping(vels, fourier_freqs.to('cuda')).to('cuda')
     else:
         input_data["fourier_vels"] = None
 
