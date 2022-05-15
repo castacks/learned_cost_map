@@ -32,7 +32,7 @@ def run_train_epoch(model, train_loader, optimizer, scheduler, grad_clip=None, f
     curr_lr = scheduler.get_last_lr()[0]
     for i, data_dict in enumerate(train_loader):
         print(f"Training batch {i}/{len(train_loader)}")
-        input, labels = preprocess_data(data_dict)
+        input, labels = preprocess_data(data_dict, fourier_freqs)
 
         loss, _metric = traversability_cost_loss(model, input, labels)
         _metric["lr"] = torch.Tensor([curr_lr])
@@ -52,7 +52,7 @@ def get_val_metrics(model, val_loader, fourier_freqs=None):
     with torch.no_grad():
         for i,data_dict in enumerate(val_loader):
             print(f"Validation batch {i}/{len(val_loader)}")
-            x, y = preprocess_data(data_dict)
+            x, y = preprocess_data(data_dict, fourier_freqs)
             loss, _metric = traversability_cost_loss(model, x, y)
             all_metrics.append(_metric)
 
