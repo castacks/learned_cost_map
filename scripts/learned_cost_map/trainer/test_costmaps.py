@@ -4,7 +4,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from learned_cost_map.trainer.model import CostModel
+from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel
 
 from learned_cost_map.trainer.utils import *
 from math import ceil
@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import time
 
 
-def produce_costmap(model, maps, map_metadata, crop_params):
+def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_freqs=None):
     '''Returns a costmap using a trained model from a maps dict.
 
     Args:
@@ -33,6 +33,15 @@ def produce_costmap(model, maps, map_metadata, crop_params):
                 'origin': origin [m]
             }
         - crop_params:
+            Dictionary containing information about the output crops     
+            {
+                'crop_size': [Float, Float] # size in meters of the patch to obtain below the robot,
+                'output_size': [Int, Int] # Size of output image in pixels
+            }
+        - vel:
+            Float of unnormalized velocity at which we want to query the costmap. If name of the model is not CostVelModel or CostFourierVelModel, this should be None.
+        - fourier_freqs:
+            Tensor of fourier frequencies used in the CostFourierVelModel. If the name of the model is different, this should be None.
             
     Returns:
         - costmap:
@@ -41,6 +50,7 @@ def produce_costmap(model, maps, map_metadata, crop_params):
     # import pdb;pdb.set_trace()
     device = "cuda" # "cuda" if torch.cuda.is_available() else "cpu"
     tm = TerrainMap(maps=maps, map_metadata=map_metadata, device=device)
+
 
     # Get tensor of all map poses to be queried
     map_height = int(map_metadata['height']/map_metadata['resolution'])
@@ -76,6 +86,11 @@ def produce_costmap(model, maps, map_metadata, crop_params):
         # front_img_ax.set_title(f"Element {b}. Looking at pose {p}")
         # Pass all map patches to network
         # import pdb;pdb.set_trace()
+        input_data = {}
+        import pdb;pdb.set_trace()
+        input_data['patches'] = patches
+        # input_data['vels'] = TODO
+        # input_data['fourier_vels'] = TODO
         costs = model(patches).detach()
         # costs = torch.rand_like(costs)
         all_costs.append(costs.squeeze())
@@ -96,9 +111,7 @@ def produce_costmap(model, maps, map_metadata, crop_params):
     return costmap
 
 
-
-
-def main(batch_size = 256, seq_length = 10, saved_model=None):
+def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=None, saved_freqs=None):
     # Set up dataloaders to visualize costmaps
     data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
     train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
@@ -108,8 +121,20 @@ def main(batch_size = 256, seq_length = 10, saved_model=None):
     shuffle_val = False
     train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
 
+    import pdb;pdb.set_trace()
+    fourier_freqs = None
+    if model_name=="CostModel":
+        model = CostModel(input_channels=8, output_size=1)
+    elif model_name=="CostVelModel":
+        model = CostVelModel(input_channels=8, embedding_size=512, output_size=1)
+    elif model_name=="CostFourierVelModel":
+        model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+        fourier_freqs = torch.load(saved_freqs)
+    else:
+        raise NotImplementedError()
+
     # Load trained model to produce costmaps
-    model = CostModel(input_channels=8, output_size=1).cuda()
+    # model = CostModel(input_channels=8, output_size=1).cuda()
     model.load_state_dict(torch.load(saved_model))
     model.eval()
 
@@ -173,5 +198,7 @@ def main(batch_size = 256, seq_length = 10, saved_model=None):
 if __name__ == '__main__':
     # Run training loop
     # saved_model = "models/epoch_20.pt"
-    saved_model = "/home/mateo/models/train500/epoch_35.pt"
-    main(batch_size = 1, seq_length = 1, saved_model=saved_model)
+    # saved_model = "/home/mateo/models/train500/epoch_35.pt"
+    saved_model = "/home/mateo/models/train_CostFourierVelModel/epoch_50.pt"
+    saved_freqs = "/home/mateo/models/train_CostFourierVelModel/fourier_freqs.pt"
+    main(batch_size = 1, seq_length = 1, saved_model=saved_model, saved_freqs=saved_freqs)
