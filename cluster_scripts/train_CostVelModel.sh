@@ -72,8 +72,8 @@ ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --save_interval $SAVE_INTERVAL \
     --num_workers $NUM_WORKERS\
     --shuffle_train \
-    --multiple_gpus
-    --shuffle_train
+    --multiple_gpus \
+    --shuffle_train \
     --pretrained
 
 echo Training CostVelModel network shell script ends.
