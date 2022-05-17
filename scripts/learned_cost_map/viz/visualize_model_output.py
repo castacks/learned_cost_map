@@ -6,7 +6,7 @@ from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.gridspec as gridspec
 from learned_cost_map.trainer.utils import get_dataloaders, preprocess_data
-from learned_cost_map.trainer.model import CostModel
+from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel
 from learned_cost_map.terrain_utils.terrain_map_tartandrive import get_local_path
 from learned_cost_map.utils.costmap_utils import local_path_to_pixels
 
@@ -96,7 +96,7 @@ def patches_to_imgs(patches_tensor):
 
     return rgb_maps, height_maps
 
-def main():
+def main(model_name, saved_model, saved_freqs):
     batch_size = 10
     seq_length = 1
     data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
@@ -115,15 +115,29 @@ def main():
     rgb_map_ax = fig.add_subplot(spec[2:4,2])
 
     # saved_model = "/home/mateo/learned_cost_map/scripts/learned_cost_map/trainer/models/epoch_20.pt"
-    saved_model="/home/mateo/models/train500/epoch_35.pt"
-    model = CostModel(input_channels=8, output_size=1).cuda()
+    # saved_model="/home/mateo/models/train500/epoch_35.pt"
+    # saved_model="/home/mateo/models/train_CostModel2/epoch_50.pt"
+    fourier_freqs = None
+    if model_name=="CostModel":
+        model = CostModel(input_channels=8, output_size=1)
+    elif model_name=="CostVelModel":
+        model = CostVelModel(input_channels=8, embedding_size=512, output_size=1)
+    elif model_name=="CostFourierVelModel":
+        model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+        fourier_freqs = torch.load(saved_freqs)
+    else:
+        raise NotImplementedError()
+
+    # model = CostModel(input_channels=8, output_size=1).cuda()
     model.load_state_dict(torch.load(saved_model))
+    model.cuda()
     model.eval()
 
     for i, data_dict in enumerate(train_loader):
         # Get cost from neural net
-        x, y = preprocess_data(data_dict)
-        pred_costs = model(x).detach().cpu().squeeze()
+        # x, y = preprocess_data(data_dict)
+        input, labels = preprocess_data(data_dict, fourier_freqs)
+        pred_costs = model(input).detach().cpu().squeeze()
 
         # Get rgb map
         rgb_map_tensor = data_dict["rgbmap"][0,0].permute(0,2,1)
@@ -193,17 +207,29 @@ def main():
             pred_cost = pred_costs[j]
             patches_axs[j].set_title(f"GT Cost: {cost:.2f}\nPred Cost: {pred_cost:.2f}")
 
-        gt_costmap_ax.imshow(gt_costmap, origin="lower", vmin=0.0, vmax=255.0)
+        gt_costmap_im = gt_costmap_ax.imshow(gt_costmap, origin="lower", vmin=0.0, vmax=255.0)
         gt_costmap_ax.set_title("Ground truth costmap")
-        pred_costmap_ax.imshow(pred_costmap, origin="lower", vmin=0.0, vmax=255.0)
+        # cb_gt = plt.colorbar(gt_costmap_im, shrink=0.4)
+        
+        pred_costmap_im = pred_costmap_ax.imshow(pred_costmap, origin="lower", vmin=0.0, vmax=255.0)
         pred_costmap_ax.set_title("Predicted costmap")
+        # cb_pred = plt.colorbar(pred_costmap_im, shrink=0.4)
+
         rgb_map_ax.imshow(rgb_map_array, origin="lower")
         rgb_map_ax.set_title("RGB map")
 
         plt.subplots_adjust(wspace=1.5)
         if i == 0:
             plt.pause(5)
-        plt.pause(5)
+        plt.pause(0.1)
+        # cb_gt.remove()
+        # cb_pred.remove()
 
 if __name__=="__main__":
-    main()
+    model_name = "CostFourierVelModel"
+    # saved_model = "/home/mateo/models/train_CostModel2/epoch_50.pt"
+    # saved_model = "/home/mateo/models/train_CostVelModel/epoch_50.pt"
+    saved_model = "/home/mateo/models/train_CostFourierVelModel/epoch_50.pt"
+    saved_freqs = None
+    saved_freqs = "/home/mateo/models/train_CostFourierVelModel/fourier_freqs.pt"
+    main(model_name, saved_model, saved_freqs)
