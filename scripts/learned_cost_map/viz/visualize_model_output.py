@@ -99,9 +99,12 @@ def patches_to_imgs(patches_tensor):
 def main(model_name, saved_model, saved_freqs):
     batch_size = 10
     seq_length = 1
-    data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
-    train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
-    val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+    # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
+    # train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+    # val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+    data_root_dir = '/home/mateo/Data/SARA/TartanDriveCostTrain'
+    train_split = '/home/mateo/Data/SARA/TartanDriveCostTrain/tartandrive_train.txt'
+    val_split = '/home/mateo/Data/SARA/TartanDriveCostTrain/tartandrive_train.txt'
     num_workers = 4
     shuffle_train = False
     shuffle_val = False
