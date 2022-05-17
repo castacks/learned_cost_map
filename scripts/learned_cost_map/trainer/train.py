@@ -82,7 +82,7 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
         fourier_freqs = get_FFM_freqs(1, scale=10.0, num_features=16)
     else:
         raise NotImplementedError()
-    
+
     if multiple_gpus and torch.cuda.device_count() > 1:
         print("Using up to ", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
@@ -174,8 +174,6 @@ if __name__ == '__main__':
     print(f"grad_clip is {args.grad_clip}")
     print(f"learning rate is {args.learning_rate}")
     print(f"pretrained is {args.pretrained}")
-    
-    import pdb;pdb.set_trace()
 
     # Run training loop
     main(model_name=args.model,
