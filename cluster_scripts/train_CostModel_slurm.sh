@@ -3,11 +3,11 @@
 # SLURM Resource Parameters
 
 #SBATCH -N 1  # CPU Cores
-#SBATCH -t 3-00:00 # D-HH:MM
+#SBATCH -t 1-00:00 # D-HH:MM
 #SBATCH -p dgx # cpu/gpu/dgx
 #SBATCH -w calculon 
-#SBATCH --gres=gpu:2
-#SBATCH --mem=32768  # MB
+#SBATCH --gres=gpu:1
+#SBATCH --mem=65536  # MB
 #SBATCH --job-name=train_CostModel
 #SBATCH -o /home/mguamanc/job_%j.out
 #SBATCH -e /home/mguamanc/job_%j.err

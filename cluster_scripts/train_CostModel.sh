@@ -29,7 +29,7 @@ RUN_NAME=train_${MODEL}
 NUM_EPOCHS=50
 BATCH_SIZE=128
 SEQ_LENGTH=1
-LEARNING_RATE=0.001
+LEARNING_RATE=0.0001
 GAMMA=0.95
 EVAL_INTERVAL=1
 SAVE_INTERVAL=1
@@ -73,6 +73,7 @@ ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --num_workers $NUM_WORKERS\
     --shuffle_train \
     --multiple_gpus
-    # --shuffle_train
+    --shuffle_train
+    --pretrained
 
-echo Training tiny network shell script ends.
+echo Training CostModel network shell script ends.

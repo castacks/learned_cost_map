@@ -4,9 +4,9 @@ import torch.nn as nn
 import torchvision.models as models
 
 class CostModel(nn.Module):
-    def __init__(self, input_channels, output_size):
+    def __init__(self, input_channels, output_size, pretrained=False):
         super().__init__()
-        self.model = models.resnet18()
+        self.model = models.resnet18(pretrained)
         self.model.conv1 = nn.Conv2d(in_channels=input_channels, out_channels=64, kernel_size=(7,7), stride=(2,2), padding=(3,3), bias=False)
         self.model.fc = nn.Linear(in_features=512, out_features=output_size, bias=True)
 
@@ -20,9 +20,9 @@ class CostModel(nn.Module):
 
 
 class CostVelModel(nn.Module):
-    def __init__(self, input_channels, embedding_size, output_size):
+    def __init__(self, input_channels, embedding_size, output_size, pretrained=False):
         super().__init__()
-        self.model = models.resnet18()
+        self.model = models.resnet18(pretrained)
         self.model.conv1 = nn.Conv2d(in_channels=input_channels, out_channels=64, kernel_size=(7,7), stride=(2,2), padding=(3,3), bias=False)
         self.model.fc = nn.Linear(in_features=512, out_features=embedding_size, bias=True)
 
@@ -52,9 +52,9 @@ class CostVelModel(nn.Module):
 
 
 class CostFourierVelModel(nn.Module):
-    def __init__(self, input_channels, ff_size, embedding_size, output_size):
+    def __init__(self, input_channels, ff_size, embedding_size, output_size, pretrained=False):
         super().__init__()
-        self.model = models.resnet18()
+        self.model = models.resnet18(pretrained)
         self.model.conv1 = nn.Conv2d(in_channels=input_channels, out_channels=64, kernel_size=(7,7), stride=(2,2), padding=(3,3), bias=False)
         self.model.fc = nn.Linear(in_features=512, out_features=embedding_size, bias=True)
 

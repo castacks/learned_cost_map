@@ -60,7 +60,7 @@ def get_val_metrics(model, val_loader, fourier_freqs=None):
 
 
 def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
-         grad_clip=None, lr = 1e-3, gamma=1, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False):
+         grad_clip=None, lr = 1e-3, gamma=1, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False):
 
     if (data_root_dir is None) or (train_split is None) or (val_split is None):
         raise NotImplementedError()
@@ -74,11 +74,11 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
     ## Set up model
     fourier_freqs = None
     if model_name=="CostModel":
-        model = CostModel(input_channels=8, output_size=1)
+        model = CostModel(input_channels=8, output_size=1, pretrained=pretrained)
     elif model_name=="CostVelModel":
-        model = CostVelModel(input_channels=8, embedding_size=512, output_size=1)
+        model = CostVelModel(input_channels=8, embedding_size=512, output_size=1, pretrained=pretrained)
     elif model_name=="CostFourierVelModel":
-        model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+        model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1, pretrained=pretrained)
         fourier_freqs = get_FFM_freqs(1, scale=10.0, num_features=16)
     else:
         raise NotImplementedError()
@@ -104,7 +104,8 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
             'gamma':gamma,
             'grad_clip': grad_clip,
             'num_epochs': num_epochs,
-            'eval_interval': eval_interval
+            'eval_interval': eval_interval,
+            "pretrained": pretrained
         }
         print("Training configuration: ")
         print(config)
@@ -166,7 +167,8 @@ if __name__ == '__main__':
     parser.add_argument('--shuffle_train', action='store_true', help="Shuffle batches for training in the DataLoader.")
     parser.add_argument('--shuffle_val', action='store_true', help="Shuffle batches for validation in the DataLoader.")
     parser.add_argument('--multiple_gpus', action='store_true', help="Use multiple GPUs if they are available.")
-    parser.set_defaults(shuffle_train=False, shuffle_val=False, multiple_gpus=False)
+    parser.add_argument('--pretrained', action='store_true', help="Use pretrained ResNet.")
+    parser.set_defaults(shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False)
     args = parser.parse_args()
 
     print(f"grad_clip is {args.grad_clip}")
@@ -189,5 +191,6 @@ if __name__ == '__main__':
          num_workers=args.num_workers, 
          shuffle_train=args.shuffle_train, 
          shuffle_val=args.shuffle_val,
-         multiple_gpus=args.multiple_gpus
+         multiple_gpus=args.multiple_gpus,
+         pretrained=args.pretrained
          )
