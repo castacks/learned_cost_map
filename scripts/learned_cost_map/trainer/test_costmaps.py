@@ -87,11 +87,20 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
         # Pass all map patches to network
         # import pdb;pdb.set_trace()
         input_data = {}
-        import pdb;pdb.set_trace()
-        input_data['patches'] = patches
-        # input_data['vels'] = TODO
-        # input_data['fourier_vels'] = TODO
-        costs = model(patches).detach()
+        # import pdb;pdb.set_trace()
+        input_data['patches'] = patches.cuda()
+        if vel is not None:
+            vels_vec = (torch.ones(patches.shape[0], 1) * vel/20.0).cuda()
+        else:
+            vels_vec = None
+        if fourier_freqs is not None:
+            fourier_freqs = fourier_freqs.cuda()
+            fourier_vels = (FourierFeatureMapping(vels_vec, fourier_freqs)).cuda()
+        else:
+            fourier_vels = None
+        input_data['vels'] = vels_vec
+        input_data['fourier_vels'] = fourier_vels
+        costs = model(input_data).detach()
         # costs = torch.rand_like(costs)
         all_costs.append(costs.squeeze())
         # plt.pause(0.1)
@@ -111,7 +120,7 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
     return costmap
 
 
-def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=None, saved_freqs=None):
+def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=None, saved_freqs=None, vel=None):
     # Set up dataloaders to visualize costmaps
     data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
     train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
@@ -121,7 +130,7 @@ def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=
     shuffle_val = False
     train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
 
-    import pdb;pdb.set_trace()
+    # import pdb;pdb.set_trace()
     fourier_freqs = None
     if model_name=="CostModel":
         model = CostModel(input_channels=8, output_size=1)
@@ -136,6 +145,7 @@ def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=
     # Load trained model to produce costmaps
     # model = CostModel(input_channels=8, output_size=1).cuda()
     model.load_state_dict(torch.load(saved_model))
+    model.cuda()
     model.eval()
 
     # Define map metadata so that we know how many cells we need to query to produce costmap
@@ -179,7 +189,7 @@ def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=
 
         print("Producing costmap")
         before = time.time()
-        costmap = produce_costmap(model, maps, map_metadata, crop_params)
+        costmap = produce_costmap(model, maps, map_metadata, crop_params, vel, fourier_freqs)
         print(f"Time to produce costmap: {time.time() - before} s.")
         front_img_ax.clear()
         rgb_map_ax.clear()
@@ -189,16 +199,28 @@ def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=
         front_img_ax.set_title("Front facing image")
         rgb_map_ax.imshow(rgb_map_array, origin="lower")
         rgb_map_ax.set_title("RGB map")
-        costmap_ax.imshow(costmap, vmin=0.0, vmax=1.0, cmap="viridis", origin="lower")
+        costmap_im = costmap_ax.imshow(costmap, vmin=0.0, vmax=1.0, cmap="viridis", origin="lower")
+        cb = plt.colorbar(costmap_im, shrink=0.4)
         costmap_ax.set_title("Learned Costmap")
         if i==0:
             plt.pause(5)
         plt.pause(0.1)
+        cb.remove()
 
 if __name__ == '__main__':
     # Run training loop
     # saved_model = "models/epoch_20.pt"
     # saved_model = "/home/mateo/models/train500/epoch_35.pt"
+
+    # saved_model = "/home/mateo/models/train_CostModel2/epoch_50.pt"
+    # vel = 10.0
+    # main(batch_size = 1, seq_length = 1, model_name="CostModel", saved_model=saved_model)
+
     saved_model = "/home/mateo/models/train_CostFourierVelModel/epoch_50.pt"
     saved_freqs = "/home/mateo/models/train_CostFourierVelModel/fourier_freqs.pt"
-    main(batch_size = 1, seq_length = 1, saved_model=saved_model, saved_freqs=saved_freqs)
+    vel = 1.0
+    main(batch_size = 1, seq_length = 1, model_name="CostFourierVelModel", saved_model=saved_model, saved_freqs=saved_freqs, vel=vel)
+
+    # saved_model = "/home/mateo/models/train_CostVelModel/epoch_50.pt"
+    # vel = 10.0
+    # main(batch_size = 1, seq_length = 1, model_name="CostVelModel", saved_model=saved_model, vel=vel)
