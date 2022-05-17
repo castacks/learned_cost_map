@@ -173,6 +173,9 @@ if __name__ == '__main__':
 
     print(f"grad_clip is {args.grad_clip}")
     print(f"learning rate is {args.learning_rate}")
+    print(f"pretrained is {args.pretrained}")
+    
+    import pdb;pdb.set_trace()
 
     # Run training loop
     main(model_name=args.model,
