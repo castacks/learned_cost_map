@@ -8,7 +8,7 @@
 #SBATCH -w calculon 
 #SBATCH --gres=gpu:1
 #SBATCH --mem=65536  # MB
-#SBATCH --job-name=train_CostFourierVelModel
+#SBATCH --job-name=train_CostFourierVelModel_aug
 #SBATCH -o /home/mguamanc/job_%j.out
 #SBATCH -e /home/mguamanc/job_%j.err
 #SBATCH --mail-type=ALL # BEGIN, END, FAIL, ALL

@@ -25,11 +25,11 @@ DATA_DIR=/project/learningphysics/tartandrive_trajs
 TRAIN_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/tartandrive_train.txt
 VAL_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/tartandrive_val.txt
 MODEL=CostModel
-RUN_NAME=train_${MODEL}
+RUN_NAME=train_${MODEL}_aug
 NUM_EPOCHS=50
 BATCH_SIZE=128
 SEQ_LENGTH=1
-LEARNING_RATE=0.0001
+LEARNING_RATE=0.003
 GAMMA=0.95
 EVAL_INTERVAL=1
 SAVE_INTERVAL=1
@@ -74,6 +74,6 @@ ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --shuffle_train \
     --multiple_gpus \
     --shuffle_train \
-    --pretrained
+    # --pretrained
 
 echo Training CostModel network shell script ends.
