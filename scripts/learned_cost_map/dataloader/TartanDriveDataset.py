@@ -435,7 +435,6 @@ def data_transform(sample):
 
         patches_hm = patches_hm.permute(0,3,1,2)
         patches = torch.cat([patches_rgb, patches_hm], dim=-3)
-        print(f"Shape of patches: {patches.shape}")
         
 
         # # Add data augmentation 
