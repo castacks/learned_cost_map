@@ -420,7 +420,12 @@ def data_transform(sample):
         img_transform = T.Compose([
             T.ToTensor(),
             T.Normalize(mean=[0.485, 0.456, 0.406],
-                        std=[0.229, 0.224, 0.225])
+                        std=[0.229, 0.224, 0.225]),
+            T.RandomApply(torch.nn.ModuleList([
+                T.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05),
+                # T.ColorJitter(brightness=0.01),
+                # T.ColorJitter(brightness=0.5, contrast=0.2, saturation=0.2, hue=0.3),
+            ]), p=0.5)
         ])
         imgs = []
         for img in patches_rgb:
@@ -430,8 +435,18 @@ def data_transform(sample):
 
         patches_hm = patches_hm.permute(0,3,1,2)
         patches = torch.cat([patches_rgb, patches_hm], dim=-3)
-        sample["patches"] = patches
+        print(f"Shape of patches: {patches.shape}")
+        
 
+        # # Add data augmentation 
+        augment_transform = T.Compose([
+            T.RandomVerticalFlip(p=0.5),
+            T.RandomAffine(degrees=15, translate=(0.1, 0.1), scale=(0.9, 1.1))
+        ])
+
+        patches = augment_transform(patches)
+
+        sample["patches"] = patches
     return sample
 
 

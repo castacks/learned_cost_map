@@ -122,9 +122,12 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
 
 def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=None, saved_freqs=None, vel=None):
     # Set up dataloaders to visualize costmaps
-    data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
-    train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
-    val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+    # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
+    # train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+    # val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+    data_root_dir = '/home/mateo/Data/SARA/TartanDriveCostTrain'
+    train_split = '/home/mateo/Data/SARA/TartanDriveCostTrain/tartandrive_train.txt'
+    val_split = '/home/mateo/Data/SARA/TartanDriveCostTrain/tartandrive_train.txt'
     num_workers = 1
     shuffle_train = False
     shuffle_val = False
@@ -172,6 +175,7 @@ def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=
     }
 
     fig = plt.figure()
+    fig.suptitle(f"Learned Costmap. Model: {model_name}. Vel: {vel:.2f}")
     front_img_ax = fig.add_subplot(131)
     rgb_map_ax = fig.add_subplot(132)
     costmap_ax = fig.add_subplot(133)
@@ -213,14 +217,14 @@ if __name__ == '__main__':
     # saved_model = "/home/mateo/models/train500/epoch_35.pt"
 
     # saved_model = "/home/mateo/models/train_CostModel2/epoch_50.pt"
-    # vel = 10.0
+    # vel = 1.0
     # main(batch_size = 1, seq_length = 1, model_name="CostModel", saved_model=saved_model)
+
+    # saved_model = "/home/mateo/models/train_CostVelModel/epoch_50.pt"
+    # vel = 1.0
+    # main(batch_size = 1, seq_length = 1, model_name="CostVelModel", saved_model=saved_model, vel=vel)
 
     saved_model = "/home/mateo/models/train_CostFourierVelModel/epoch_50.pt"
     saved_freqs = "/home/mateo/models/train_CostFourierVelModel/fourier_freqs.pt"
-    vel = 1.0
+    vel = 10.0
     main(batch_size = 1, seq_length = 1, model_name="CostFourierVelModel", saved_model=saved_model, saved_freqs=saved_freqs, vel=vel)
-
-    # saved_model = "/home/mateo/models/train_CostVelModel/epoch_50.pt"
-    # vel = 10.0
-    # main(batch_size = 1, seq_length = 1, model_name="CostVelModel", saved_model=saved_model, vel=vel)

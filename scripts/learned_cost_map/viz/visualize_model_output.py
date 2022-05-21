@@ -97,7 +97,7 @@ def patches_to_imgs(patches_tensor):
     return rgb_maps, height_maps
 
 def main(model_name, saved_model, saved_freqs):
-    batch_size = 10
+    batch_size = 1
     seq_length = 1
     # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
     # train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
@@ -141,6 +141,10 @@ def main(model_name, saved_model, saved_freqs):
         # x, y = preprocess_data(data_dict)
         input, labels = preprocess_data(data_dict, fourier_freqs)
         pred_costs = model(input).detach().cpu().squeeze()
+
+        vel = 20.0*torch.mean(input["vels"]).cpu().item()
+        print(vel)
+        fig.suptitle(f"Learned Cost on Training Data. Model: {model_name}. Vel: {vel:.2f}")
 
         # Get rgb map
         rgb_map_tensor = data_dict["rgbmap"][0,0].permute(0,2,1)
@@ -232,7 +236,8 @@ if __name__=="__main__":
     model_name = "CostFourierVelModel"
     # saved_model = "/home/mateo/models/train_CostModel2/epoch_50.pt"
     # saved_model = "/home/mateo/models/train_CostVelModel/epoch_50.pt"
+    # saved_freqs = None
+
     saved_model = "/home/mateo/models/train_CostFourierVelModel/epoch_50.pt"
-    saved_freqs = None
     saved_freqs = "/home/mateo/models/train_CostFourierVelModel/fourier_freqs.pt"
     main(model_name, saved_model, saved_freqs)
