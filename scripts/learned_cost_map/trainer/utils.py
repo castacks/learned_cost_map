@@ -104,7 +104,8 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
                             transform=data_transform,
                             imu_freq = 10,
                             frame_skip = 0, 
-                            frame_stride=5)
+                            frame_stride=5,
+                            augment_data=True)
     val_set = DatasetBase(val_split,
                           dataroot= data_root_dir,
                           datatypes = datatypes,
@@ -112,7 +113,8 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
                           transform=data_transform,
                           imu_freq = 10,
                           frame_skip = 0, 
-                          frame_stride=5)
+                          frame_stride=5,
+                          augment_data=False)
 
     if use_multi_epochs_loader:
         loader_class = MultiEpochsDataLoader

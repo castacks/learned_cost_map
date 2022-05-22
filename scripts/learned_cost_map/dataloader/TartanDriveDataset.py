@@ -33,7 +33,9 @@ class DatasetBase(Dataset):
         modalitylens = [1,1,1,1,1,1,1,1,1,1,10], \
         transform=None, \
         imu_freq = 10, \
-        frame_skip = 0, frame_stride = 1):
+        frame_skip = 0, \
+        frame_stride = 1, \
+        augment_data = False):
 
         super(DatasetBase, self).__init__()
         self.framelistfile = framelistfile
@@ -42,6 +44,7 @@ class DatasetBase(Dataset):
         self.imu_freq = imu_freq
         self.frame_skip = frame_skip # sample not consequtively, skip a few frames within a sequences
         self.frame_stride = frame_stride # sample less sequence, skip a few frames between two sequences 
+        self.augment_data = augment_data
 
         self.datatypelist = datatypes.split(',')
         self.modalitylenlist = modalitylens
@@ -233,7 +236,7 @@ class DatasetBase(Dataset):
 
         # Transform.
         if ( self.transform is not None):
-            sample = self.transform(sample)
+            sample = self.transform(sample, self.augment_data)
 
         return sample
 
@@ -328,7 +331,7 @@ class DatasetBase(Dataset):
         return patches, masks
 
 
-def data_transform(sample):
+def data_transform(sample, augment_data=False):
     # Transform left_img=img0, right_img=img1, color_img=imgc, disparity image=disp0
     # Convert to Tensor
     # Transform to pytorch tensors, make sure they are all in CxHxW configuration
@@ -417,16 +420,22 @@ def data_transform(sample):
         patches_hm = torch.cat([patches_hm, patches_hm_nan], dim=-1)
 
         # Process rgb maps
-        img_transform = T.Compose([
-            T.ToTensor(),
-            T.Normalize(mean=[0.485, 0.456, 0.406],
-                        std=[0.229, 0.224, 0.225]),
-            T.RandomApply(torch.nn.ModuleList([
-                T.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05),
-                # T.ColorJitter(brightness=0.01),
-                # T.ColorJitter(brightness=0.5, contrast=0.2, saturation=0.2, hue=0.3),
-            ]), p=0.5)
-        ])
+        if augment_data:
+            img_transform = T.Compose([
+                T.ToTensor(),
+                T.Normalize(mean=[0.485, 0.456, 0.406],
+                            std=[0.229, 0.224, 0.225]),
+                T.RandomApply(torch.nn.ModuleList([
+                    T.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05),
+                ]), p=0.5)
+            ])
+        else:
+            img_transform = T.Compose([
+                T.ToTensor(),
+                T.Normalize(mean=[0.485, 0.456, 0.406],
+                            std=[0.229, 0.224, 0.225]),
+            ])
+
         imgs = []
         for img in patches_rgb:
             img_torch = img_transform(img.astype(np.uint8))
@@ -438,12 +447,13 @@ def data_transform(sample):
         
 
         # # Add data augmentation 
-        augment_transform = T.Compose([
-            T.RandomVerticalFlip(p=0.5),
-            T.RandomAffine(degrees=15, translate=(0.1, 0.1), scale=(0.9, 1.1))
-        ])
+        if augment_data:
+            augment_transform = T.Compose([
+                T.RandomVerticalFlip(p=0.5),
+                T.RandomAffine(degrees=15, translate=(0.1, 0.1), scale=(0.9, 1.1))
+            ])
 
-        patches = augment_transform(patches)
+            patches = augment_transform(patches)
 
         sample["patches"] = patches
     return sample
