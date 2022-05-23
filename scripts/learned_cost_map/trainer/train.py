@@ -60,7 +60,7 @@ def get_val_metrics(model, val_loader, fourier_freqs=None):
 
 
 def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
-         grad_clip=None, lr = 1e-3, gamma=1, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False):
+         grad_clip=None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False):
 
     if (data_root_dir is None) or (train_split is None) or (val_split is None):
         raise NotImplementedError()
@@ -87,7 +87,7 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
         print("Using up to ", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
     model.cuda()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma)
 
     if saved_model is not None:
@@ -102,6 +102,7 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
             'seq_length': seq_length,
             'lr': lr,
             'gamma':gamma,
+            'weight_decay':weight_decay,
             'grad_clip': grad_clip,
             'num_epochs': num_epochs,
             'eval_interval': eval_interval,
@@ -161,6 +162,7 @@ if __name__ == '__main__':
     parser.add_argument('--grad_clip', type=float, help='Max norm of gradients. Leave blank for no grad clipping')
     parser.add_argument('-lr', '--learning_rate', type=float, default=1e-3, help='Initial learning rate.')
     parser.add_argument('--gamma', type=float, default=1.0, help="Value by which learning rate will be decreased at every epoch.")
+    parser.add_argument('--weight_decay', type=float, default=0.0, help="L2 penalty (default is 0.0).")
     parser.add_argument("--eval_interval", type=int, default=1, help="How often to evaluate on validation set.")
     parser.add_argument("--save_interval", type=int, default=1, help="How often to save model.")
     parser.add_argument("--num_workers", type=int, default=4, help="Number of workers for the DataLoader.")
@@ -174,6 +176,7 @@ if __name__ == '__main__':
     print(f"grad_clip is {args.grad_clip}")
     print(f"learning rate is {args.learning_rate}")
     print(f"pretrained is {args.pretrained}")
+    print(f"weight decay is {args.weight_decay}")
 
     # Run training loop
     main(model_name=args.model,
@@ -183,7 +186,8 @@ if __name__ == '__main__':
          seq_length = args.seq_length, 
          grad_clip=args.grad_clip, 
          lr = args.learning_rate,
-         gamma=args.gamma, 
+         gamma=args.gamma,
+         weight_decay=args.weight_decay, 
          eval_interval = args.eval_interval, 
          save_interval=args.save_interval, 
          data_root_dir=args.data_dir, 

@@ -30,6 +30,7 @@ NUM_EPOCHS=50
 BATCH_SIZE=128
 SEQ_LENGTH=1
 LEARNING_RATE=0.0003
+WEIGHT_DECAY=0.01
 GAMMA=0.95
 EVAL_INTERVAL=1
 SAVE_INTERVAL=1
@@ -68,6 +69,7 @@ ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --seq_length $SEQ_LENGTH \
     -lr $LEARNING_RATE \
     --gamma $GAMMA \
+    --weight_decay $WEIGHT_DECAY \
     --eval_interval $EVAL_INTERVAL \
     --save_interval $SAVE_INTERVAL \
     --num_workers $NUM_WORKERS\
