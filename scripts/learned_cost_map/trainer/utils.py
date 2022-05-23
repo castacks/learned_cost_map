@@ -105,7 +105,7 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
                             imu_freq = 10,
                             frame_skip = 0, 
                             frame_stride=5,
-                            augment_data=True)
+                            augment_data=False)
     val_set = DatasetBase(val_split,
                           dataroot= data_root_dir,
                           datatypes = datatypes,
