@@ -13,7 +13,7 @@ BASE_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/utils
 
 
 # Variables for trainer
-PY_TRAIN=get_histograms.py
+PY_SCRIPT=get_histograms.py
 DATA_DIR=/project/learningphysics/tartandrive_trajs
 TRAIN_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/train_uniform.txt
 VAL_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/val_uniform.txt
@@ -28,7 +28,7 @@ sudo pip3 install -e .
 
 
 # Run split script
-${EXE_PYTHON} $BASE_DIR/$PY_SPLIT \
+${EXE_PYTHON} $BASE_DIR/$PY_SCRIPT \
     --data_dir $DATA_DIR \
     --train_split $TRAIN_SPLIT \
     --val_split $VAL_SPLIT \
