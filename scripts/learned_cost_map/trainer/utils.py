@@ -148,21 +148,21 @@ def preprocess_data(input_dict, fourier_freqs=None):
             A tensor of pseudo ground-truth labels
     '''
     input_data = {}
-    input_data["patches"] = input_dict["patches"].view(-1, *input_dict["patches"].shape[-3:]).to('cuda')
+    input_data["patches"] = input_dict["patches"].view(-1, *input_dict["patches"].shape[-3:])#.to('cuda')
     
     odom_tensor = input_dict["odom"]
-    vels = torch.linalg.norm(odom_tensor[...,7:10], dim=-1).view(-1,1).to('cuda') # view(-1,1) refers to -1 batches, 1 dim for velocity, since it is one dimensional
+    vels = torch.linalg.norm(odom_tensor[...,7:10], dim=-1).view(-1,1)#.to('cuda') # view(-1,1) refers to -1 batches, 1 dim for velocity, since it is one dimensional
     #Normalize velocity:
     vels=torch.clamp(vels/20.0, min=0.0, max=1.0)
     input_data["vels"] = vels
 
     if fourier_freqs is not None:
-        input_data['fourier_vels'] = FourierFeatureMapping(vels, fourier_freqs.to('cuda')).to('cuda')
+        input_data['fourier_vels'] = FourierFeatureMapping(vels, fourier_freqs.to('cuda'))#.to('cuda')
     else:
         input_data["fourier_vels"] = None
 
 
-    labels = input_dict["cost"].view(-1).to('cuda')
+    labels = input_dict["cost"].view(-1)#.to('cuda')
     return input_data, labels
 
 def avg_dict(all_metrics):

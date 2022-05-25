@@ -4,8 +4,8 @@
 
 #SBATCH -N 1  # CPU Cores
 #SBATCH -t 0-02:00 # D-HH:MM
-#SBATCH -p gpu # cpu/gpu/dgx
-#SBATCH -w bender 
+#SBATCH -p dgx # cpu/gpu/dgx
+#SBATCH -w calculon 
 #SBATCH --gres=gpu:1
 #SBATCH --mem=65536  # MB
 #SBATCH --job-name=get_histograms
