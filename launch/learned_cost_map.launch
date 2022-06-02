@@ -5,15 +5,15 @@
 
     <!-- <node pkg="physics_atv_local_mapping" type="colorize_pcl_node.py" name="ColorizePclNode" output="screen" /> -->
 
-    <arg name="model_dir" default="../../scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_uni_aug_l2"/>
+    <arg name="model_dir" default="$(find learned_cost_map)/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_uni_aug_l2"/>
     <arg name="model_name" default="CostFourierVelModel"/>
 
     <node pkg="learned_cost_map" type="costmap_node.py" name="learned_costmap_node" output="screen">
-        <param name="model_name" value="$(arg model_name)">
-        <param name="model_dir" value="$(arg model_dir)">
+        <param name="model_name" value="$(arg model_name)"/>
+        <param name="model_dir" value="$(arg model_dir)"/>
     </node>    
 
-    <include file="$(find local_mapping)/traversability_cost.launch"/>
+    <include file="$(find learned_cost_map)/launch/traversability_cost_publisher.launch"/>
 
 
 </launch>

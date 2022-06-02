@@ -117,7 +117,7 @@ if __name__ == '__main__':
     # vel = 1.0
     # main(batch_size = 1, seq_length = 1, model_name="CostVelModel", saved_model=saved_model, vel=vel)
 
-    saved_model = "/home/mateo/models/train_CostFourierVelModel/epoch_50.pt"
-    saved_freqs = "/home/mateo/models/train_CostFourierVelModel/fourier_freqs.pt"
+    saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_uni_aug_l2/epoch_50.pt"
+    saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_uni_aug_l2/fourier_freqs.pt"
     vel = 10.0
     main(batch_size = 1, seq_length = 1, model_name="CostFourierVelModel", saved_model=saved_model, saved_freqs=saved_freqs, vel=vel)

@@ -60,7 +60,7 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
     x_pixels = torch.arange(0, map_height, stride)
     y_pixels = torch.arange(0, map_width, stride)
     x_poses = x_pixels*map_metadata['resolution']+map_metadata["origin"][0]
-    y_poses = y_pixels*map_metadata['resolution']+map_metadata["origin"][0]
+    y_poses = y_pixels*map_metadata['resolution']+map_metadata["origin"][1]
     all_poses = torch.stack(torch.meshgrid(x_poses, y_poses, indexing="ij"), dim=-1).view(-1, 2)
     # Append orientations
     all_poses = torch.cat([all_poses, torch.zeros(all_poses.shape[0], 1)], dim=-1).to(device).detach()

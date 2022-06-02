@@ -150,7 +150,7 @@ def cost_function(data, sensor_freq, cost_name, cost_stats, freq_range=None, num
     return cost
 
 class TraversabilityCostNode(object):
-    def __init__(self):
+    def __init__(self, cost_stats_dir):
         
         # Set up subscribers
         rospy.Subscriber('/novatel/imu/data', Imu, self.handle_imu, queue_size=1)
@@ -167,7 +167,7 @@ class TraversabilityCostNode(object):
         self.buffer = Buffer(self.buffer_size, padded=True, pad_val=pad_val.linear_acceleration.z)
 
         # Load stats for different cost functions:
-        cost_stats_dir = "/home/yamaha/physics_atv_ws/src/perception/learned_cost_map/scripts/learned_cost_map/ros/cost_statistics.yaml"
+        self.cost_stats_dir = cost_stats_dir
         
         with open(cost_stats_dir, 'r') as f:
             self.all_costs_stats = yaml.safe_load(f)
@@ -199,8 +199,8 @@ class TraversabilityCostNode(object):
 if __name__ == "__main__":
     rospy.init_node("traversability_cost_publisher", log_level=rospy.INFO)
     rospy.loginfo("Initialized traversability_cost_publisher node")
-
-    node = TraversabilityCostNode()
+    cost_stats_dir = rospy.get_param("~cost_stats_dir")
+    node = TraversabilityCostNode(cost_stats_dir)
     rate = rospy.Rate(100)
 
     while not rospy.is_shutdown():
