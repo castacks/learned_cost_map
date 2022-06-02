@@ -167,13 +167,17 @@ def main(model_name, saved_model, saved_freqs):
 
         # Get local odom to plot path:
         odom_tensor = data_dict["odom"][0]
+        # import pdb;pdb.set_trace()
+        # NOTE: This is necessary when using the GPS odometry rather than the TartanVO odom
+        odom_tensor = torch.index_select(odom_tensor, 1, torch.LongTensor([1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]))
+        
         local_path = get_local_path(odom_tensor)
         map_metadata = {
                 'height': 12.0,
                 'width': 12.0,
                 'resolution': 0.02,
-                # 'origin': [-2.0, -6.0]
-                'origin': [-6.0, -2.0]
+                'origin': [-2.0, -6.0]
+                # 'origin': [-6.0, -2.0]
             }
         path_pix_x, path_pix_y = local_path_to_pixels(local_path, map_metadata)
         gt_costmap = torch.zeros(rgb_map_array.shape[:-1])
