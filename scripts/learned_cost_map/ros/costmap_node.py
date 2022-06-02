@@ -25,14 +25,14 @@ class CostmapNode(object):
         self.rgbmap_inflate = None
 
         # Load trained model to produce costmaps
-        fourier_freqs = None
+        self.fourier_freqs = None
         if model_name=="CostModel":
             self.model = CostModel(input_channels=8, output_size=1)
         elif model_name=="CostVelModel":
             self.model = CostVelModel(input_channels=8, embedding_size=512, output_size=1)
         elif model_name=="CostFourierVelModel":
             self.model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
-            fourier_freqs = torch.load(saved_freqs)
+            self.fourier_freqs = torch.load(saved_freqs)
         else:
             raise NotImplementedError()
 
@@ -95,7 +95,8 @@ class CostmapNode(object):
             return 
         maps = rosmsgs_to_maps(self.rgbmap_inflate, self.heightmap_inflate)
         before = time.time()
-        costmap = produce_costmap(self.model, maps, self.map_metadata, self.crop_params)
+        # import pdb;pdb.set_trace()
+        costmap = produce_costmap(self.model, maps, self.map_metadata, self.crop_params, vel=5.0, fourier_freqs=self.fourier_freqs)
         print(f"Takes {time.time()-before} seconds to produce a costmap")
 
         costmap_grid = OccupancyGrid()

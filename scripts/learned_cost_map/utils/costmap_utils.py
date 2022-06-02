@@ -101,6 +101,7 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
             fourier_vels = None
         input_data['vels'] = vels_vec
         input_data['fourier_vels'] = fourier_vels
+        # import pdb;pdb.set_trace()
         costs = model(input_data).detach()
         # costs = torch.rand_like(costs)
         all_costs.append(costs.squeeze())
