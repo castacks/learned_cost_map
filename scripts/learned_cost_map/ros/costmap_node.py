@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import rospy
+import os
 import torch
 import numpy as np
 
@@ -11,11 +12,11 @@ from nav_msgs.msg import OccupancyGrid, MapMetaData
 import time
 
 from learned_cost_map.utils.costmap_utils import produce_costmap, rosmsgs_to_maps
-from learned_cost_map.trainer.model import CostModel
+from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel
 
 
 class CostmapNode(object):
-    def __init__(self, saved_model):
+    def __init__(self, model_name, saved_model, saved_freqs):
         self.cvbridge = CvBridge()
 
         rospy.Subscriber('/local_height_map_inflate', Image, self.handle_height_inflate, queue_size=1)
@@ -24,9 +25,22 @@ class CostmapNode(object):
         self.rgbmap_inflate = None
 
         # Load trained model to produce costmaps
-        self.model = CostModel(input_channels=8, output_size=1).cuda()
+        fourier_freqs = None
+        if model_name=="CostModel":
+            self.model = CostModel(input_channels=8, output_size=1)
+        elif model_name=="CostVelModel":
+            self.model = CostVelModel(input_channels=8, embedding_size=512, output_size=1)
+        elif model_name=="CostFourierVelModel":
+            self.model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+            fourier_freqs = torch.load(saved_freqs)
+        else:
+            raise NotImplementedError()
+
+        # model = CostModel(input_channels=8, output_size=1).cuda()
         self.model.load_state_dict(torch.load(saved_model))
+        self.model.cuda()
         self.model.eval()
+
 
         # Define map metadata so that we know how many cells we need to query to produce costmap
         map_height = 12.0 # [m]
@@ -107,8 +121,13 @@ if __name__ == '__main__':
     rospy.init_node("learned_costmap_node", log_level=rospy.INFO)
 
     rospy.loginfo("learned_costmap_node initialized")
-    saved_model = "/home/mateo/learned_cost_map/scripts/learned_cost_map/trainer/models/epoch_19.pt"
-    node = CostmapNode(saved_model)
+    model_dir = rospy.get_param("~model_dir")
+    model_name = rospy.get_param("~model_name")
+    if (model_dir is None) or (model_name is None):
+        raise NotImplementedError()
+    saved_model = os.path.join(model_dir, 'epoch_50.pt')
+    saved_freqs = os.path.join(model_dir, 'fourier_freqs.pt')
+    node = CostmapNode(model_name, saved_model, saved_freqs)
     r = rospy.Rate(10)
     while not rospy.is_shutdown(): # loop just for visualization
         node.publish_costmap()
