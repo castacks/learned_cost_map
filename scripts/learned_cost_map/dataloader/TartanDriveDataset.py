@@ -65,7 +65,7 @@ class DatasetBase(Dataset):
             self.cmdlist = self.loadDataFromFile(self.trajlist, 'cmd/twist.npy')
         if 'odom' in self.datatypelist:
             self.odomlist = self.loadDataFromFile(self.trajlist, 'odom/odometry.npy')
-            # self.odomlist = self.loadDataFromFile(self.trajlist, 'tartanvo_odom/poses.npy')
+            self.odomlist_tartanvo = self.loadDataFromFile(self.trajlist, 'tartanvo_odom/poses.npy')
         if 'imu' in self.datatypelist:
             self.imulist = self.loadDataFromFile(self.trajlist, 'imu/imu.npy')
         if 'cost' in self.datatypelist:
@@ -213,8 +213,9 @@ class DatasetBase(Dataset):
                 datalist = self.load_numpy(datafilelist)
                 sample[datatype] = datalist
             elif datatype == 'odom':
-                odomlist = self.load_odom(frameindlist, datalen)
+                odomlist, odomlist_tartanvo = self.load_odom(frameindlist, datalen)
                 sample[datatype] = odomlist
+                sample['odom_tartanvo'] = odomlist_tartanvo
             elif datatype == 'cmd':
                 cmdlist = self.load_cmd(frameindlist, datalen)
                 sample[datatype] = cmdlist
@@ -260,7 +261,7 @@ class DatasetBase(Dataset):
         return self.imulist[startidx: startidx+(len*(self.frame_skip+1)): self.frame_skip+1]
 
     def load_odom(self, frameindlist, datalen):
-        return self.odomlist[frameindlist[:datalen]]
+        return self.odomlist[frameindlist[:datalen]], self.odomlist_tartanvo[frameindlist[:datalen]]
 
     def load_cmd(self, frameindlist, datalen):
         return self.cmdlist[frameindlist[:datalen]]
@@ -282,13 +283,11 @@ class DatasetBase(Dataset):
     def get_crops(self, heightmaps, rgbmaps, odom):
         '''Returns (patches, costs)
         '''
-        # import pdb;pdb.set_trace()
         # Set up TerrainMap object
         map_height = 12.0 # [m]
         map_width  = 12.0 # [m]
         resolution = 0.02
-        # origin     = [-2.0, -6.0]
-        origin     = [-6.0, -2.0]
+        origin     = [-2.0, -6.0]
 
         crop_width = 2.0  # in meters
         crop_size = [crop_width, crop_width]
@@ -323,6 +322,10 @@ class DatasetBase(Dataset):
         tm = TerrainMap(maps=maps, map_metadata=map_metadata, device=device)
 
         local_path = get_local_path(torch.from_numpy(odom)).to(device)
+        
+        ## GPS odom is 90 degrees rotated NED To FLU
+        local_path = torch.index_select(local_path, 1, torch.LongTensor([1, 0, 2]))
+        local_path[:,1] = -local_path[:,1]
 
         # patches = tm.get_crop_batch(local_path, crop_params)
         patches, masks = tm.get_crop_batch_and_masks(local_path, crop_params)

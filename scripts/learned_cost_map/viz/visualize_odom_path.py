@@ -112,11 +112,10 @@ def main(model_name, saved_model, saved_freqs):
     train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
 
     fig = plt.figure()
-    spec = gridspec.GridSpec(ncols=5, nrows=4, figure=fig)
-    patches_axs  = [fig.add_subplot(spec[0,i]) for i in range(5)] + [fig.add_subplot(spec[1,i]) for i in range(5)]
-    gt_costmap_ax = fig.add_subplot(spec[2:4,0:2])
-    pred_costmap_ax = fig.add_subplot(spec[2:4,3:5])
-    rgb_map_ax = fig.add_subplot(spec[2:4,2])
+    front_facing_ax = fig.add_subplot(221)
+    top_down_ax = fig.add_subplot(222)
+    paths_ax = fig.add_subplot(223)
+    pred_costmap_ax = fig.add_subplot(224)
 
 
     fourier_freqs = None
@@ -213,32 +212,34 @@ def main(model_name, saved_model, saved_freqs):
         gt_costmap = gt_costmap.cpu().numpy().astype(np.uint8)
         pred_costmap = pred_costmap.cpu().numpy().astype(np.uint8)
 
-        gt_costmap_ax.clear()
+        front_facing_ax.clear()
+        top_down_ax.clear()
+        paths_ax.clear()
         pred_costmap_ax.clear()
-        rgb_map_ax.clear()
 
-
-        for j,patch in enumerate(rgb_maps):
-            patches_axs[j].clear()
-            patches_axs[j].imshow(patch, origin="lower")
-            # patches_axs[j].imshow(np.swapaxes(patch, 0, 1), origin="lower")
-            cost = costs[j]
-            pred_cost = pred_costs[j]
-            patches_axs[j].set_title(f"GT Cost: {cost:.2f}\nPred Cost: {pred_cost:.2f}")
-
-        # gt_costmap_im = gt_costmap_ax.imshow(gt_costmap, origin="lower", vmin=0.0, vmax=255.0)
-        gt_costmap_im = gt_costmap_ax.imshow(np.swapaxes(gt_costmap, 0, 1), origin="lower", vmin=0.0, vmax=255.0)
-        gt_costmap_ax.set_title("Ground truth costmap")
-        # cb_gt = plt.colorbar(gt_costmap_im, shrink=0.4)
         
         # pred_costmap_im = pred_costmap_ax.imshow(pred_costmap, origin="lower", vmin=0.0, vmax=255.0)
         pred_costmap_im = pred_costmap_ax.imshow(np.swapaxes(pred_costmap, 0, 1), origin="lower", vmin=0.0, vmax=255.0)
         pred_costmap_ax.set_title("Predicted costmap")
         # cb_pred = plt.colorbar(pred_costmap_im, shrink=0.4)
 
-        rgb_map_ax.imshow(rgb_map_array, origin="lower")
-        rgb_map_ax.set_title("RGB map")
 
+
+        front_facing_ax.imshow(rgb_front_array)
+        front_facing_ax.set_title("Front facing")
+
+        top_down_ax.imshow(rgb_map_array, origin="lower")
+        top_down_ax.set_title("RGB map")
+
+        paths_ax.plot(odom_tensor[:,0]-odom_tensor[0,0], odom_tensor[:,1]-odom_tensor[0,1], label="Raw Odom")
+        paths_ax.plot(local_path[:,0], local_path[:,1], label="GPS Path")
+        paths_ax.plot(local_path_tartanvo[:,0], local_path_tartanvo[:,1], label="TartanVO Path")
+        paths_ax.set_xlabel("X axis")
+        paths_ax.set_ylabel("Y axis")
+        paths_ax.set_xlim([-6.0, 6.0])
+        paths_ax.set_ylim([-6.0, 6.0])
+        paths_ax.set_aspect(1.0)
+        paths_ax.legend()
 
 
         plt.subplots_adjust(wspace=1.5)

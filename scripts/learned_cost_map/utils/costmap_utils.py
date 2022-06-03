@@ -165,31 +165,6 @@ def rosmsgs_to_maps(rgbmap, heightmap):
     return maps
 
 
-# VERSION BELOW IS INCORRECT
-# def local_path_to_pixels(local_path, map_metadata):
-#     '''Returns the pixel locations of a local_path in the costmap.
-    
-#     Args:
-#         - local_path:
-#             Nx3 array of local path obtained from odometry
-#         - map_metadata:
-#             Dictionary containing metadata for costmap. Has the following structure:
-#             {
-#                 'height': map_height [m],
-#                 'width': map_width [m],
-#                 'resolution': resolution [m],
-#                 'origin': origin [m]
-#             }
-#     '''
-
-#     x_positions = local_path[:,0]
-#     y_positions = local_path[:,1]
-
-#     x_pixels = ((x_positions - map_metadata["origin"][0])/map_metadata["resolution"]).long()
-#     y_pixels = ((y_positions - map_metadata["origin"][1])/map_metadata["resolution"]).long()
-
-#     return x_pixels, y_pixels
-
 def local_path_to_pixels(local_path, map_metadata):
     '''Returns the pixel locations of a local_path in the costmap.
     
@@ -205,11 +180,11 @@ def local_path_to_pixels(local_path, map_metadata):
                 'origin': origin [m]
             }
     '''
-    # Notice x_positions and y_positions are flipped. This is to account for robot coordinates
-    x_positions = local_path[:,1]
-    y_positions = local_path[:,0]
 
-    x_pixels = ((x_positions - map_metadata["origin"][1])/map_metadata["resolution"]).long()
-    y_pixels = ((y_positions - map_metadata["origin"][0])/map_metadata["resolution"]).long()
+    x_positions = local_path[:,0]
+    y_positions = local_path[:,1]
+
+    x_pixels = ((x_positions - map_metadata["origin"][0])/map_metadata["resolution"]).long()
+    y_pixels = ((y_positions - map_metadata["origin"][1])/map_metadata["resolution"]).long()
 
     return x_pixels, y_pixels

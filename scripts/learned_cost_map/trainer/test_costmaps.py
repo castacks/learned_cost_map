@@ -48,8 +48,7 @@ def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=
     map_height = 12.0 # [m]
     map_width  = 12.0 # [m]
     resolution = 0.02
-    # origin     = [-2.0, -6.0]
-    origin     = [-6.0, -2.0]
+    origin     = [-2.0, -6.0]
 
     map_metadata = {
         'height': map_height,
@@ -96,7 +95,7 @@ def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=
         front_img_ax.set_title("Front facing image")
         rgb_map_ax.imshow(rgb_map_array, origin="lower")
         rgb_map_ax.set_title("RGB map")
-        costmap_im = costmap_ax.imshow(costmap, vmin=0.0, vmax=1.0, cmap="viridis", origin="lower")
+        costmap_im = costmap_ax.imshow(np.swapaxes(costmap, 0, 1), vmin=0.0, vmax=1.0, cmap="viridis", origin="lower")
         cb = plt.colorbar(costmap_im, shrink=0.4)
         costmap_ax.set_title("Learned Costmap")
         if i==0:
@@ -119,5 +118,5 @@ if __name__ == '__main__':
 
     saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_uni_aug_l2/epoch_50.pt"
     saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_uni_aug_l2/fourier_freqs.pt"
-    vel = 10.0
+    vel = 5.0
     main(batch_size = 1, seq_length = 1, model_name="CostFourierVelModel", saved_model=saved_model, saved_freqs=saved_freqs, vel=vel)

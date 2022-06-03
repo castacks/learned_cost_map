@@ -5,7 +5,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostModelEfficientNet
+from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostModelEfficientNet, CostFourierVelModelEfficientNet
 
 from learned_cost_map.trainer.utils import *
 
@@ -82,6 +82,9 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
         fourier_freqs = get_FFM_freqs(1, scale=10.0, num_features=16)
     elif model_name=="CostModelEfficientNet":
         model = CostModelEfficientNet(input_channels=8, output_size=1, pretrained=pretrained)
+    elif model_name=="CostFourierVelModelEfficientNet":
+        model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=16, embedding_size=512, output_size=1, pretrained=pretrained)
+        fourier_freqs = get_FFM_freqs(1, scale=10.0, num_features=16)
     else:
         raise NotImplementedError()
 
@@ -153,7 +156,7 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', choices=['CostModel', 'CostVelModel', 'CostFourierVelModel', 'CostModelEfficientNet'], default='CostModel')
+    parser.add_argument('--model', choices=['CostModel', 'CostVelModel', 'CostFourierVelModel', 'CostModelEfficientNet', 'CostFourierVelModelEfficientNet'], default='CostModel')
     parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
     parser.add_argument('--train_split', type=str, required=True, help='Path to the file that contains the training split text file.')
     parser.add_argument('--val_split', type=str, required=True, help='Path to the file that contains the validation split text file.')

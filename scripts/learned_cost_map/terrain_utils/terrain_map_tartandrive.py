@@ -184,8 +184,8 @@ class TerrainMap:
 
 
         #[B x C x W x H]
-        # flipped_maps = self.maps_tensor.swapaxes(-1, -2) # To align with robot-centric coordinates since poses are in robot-centric coords.
-        flipped_maps = self.maps_tensor
+        flipped_maps = self.maps_tensor.swapaxes(-1, -2) # To align with robot-centric coordinates since poses are in robot-centric coords.
+        # flipped_maps = self.maps_tensor
         map_values  = flipped_maps[:, pxlist[:, 0], pxlist[:, 1]]
 
         # Reshape map values so that they go from [C, B*W*H] to [B, C, W, H]
@@ -198,7 +198,7 @@ class TerrainMap:
         patches = (1.-invalid_mask)*map_values + invalid_mask*fill_value
 
         # Swap order from [B, C, W, H] to [B, C, H, W]
-        # patches = patches.swapaxes(-1, -2) 
+        patches = patches.swapaxes(-1, -2) 
 
         return patches, pixel_coordinates
 

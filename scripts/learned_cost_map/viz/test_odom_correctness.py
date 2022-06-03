@@ -7,6 +7,24 @@ import torch
 import matplotlib.pyplot as plt
 
 
+odom_tensor_1 = torch.Tensor([
+        [ 5.0000e+00,  5.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,
+          7.0711e-01,  7.0711e-01,  1.0000e+00,  1.0000e+00,  1.0000e+00,
+          0.0000e+00,  0.0000e+00,  0.0000e+00],
+        [ 5.0000e+00,  6.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,
+          7.0711e-01,  7.0711e-01,  1.0000e+00,  1.0000e+00,  1.0000e+00,
+          0.0000e+00,  0.0000e+00,  0.0000e+00],
+        [ 6.0000e+00,  7.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,
+          3.8268e-01,  9.2388e-01,  1.0000e+00,  1.0000e+00,  1.0000e+00,
+          0.0000e+00,  0.0000e+00,  0.0000e+00],
+        [ 7.0000e+00,  8.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,
+          0.0000e-00,  1.0000e+00,  1.0000e+00,  1.0000e+00,  1.0000e+00,
+          0.0000e+00,  0.0000e+00,  0.0000e+00],
+        [ 8.0000e+00,  8.0000e+00,  0.0000e+00,  0.0000e+00,  0.0000e+00,
+          0.0000e-00,  1.0000e+00,  1.0000e+00,  1.0000e+00,  1.0000e+00,
+          0.0000e+00,  0.0000e+00,  0.0000e+00]])
+
+
 
 local_path_1 = torch.Tensor([
         [ 0.0000e+00,  0.0000e+00,  0.0000e+00],
@@ -77,7 +95,7 @@ def main():
         rgb_map_array = tensor_to_img(rgb_map_tensor)
 
         # Get local odom to plot path:
-        odom_tensor = data_dict["odom"][0]
+        odom_tensor = odom_tensor_1 #data_dict["odom"][0]
         # import pdb;pdb.set_trace()
         vels = torch.linalg.norm(odom_tensor[:,7:10], dim=1)
         print(vels)
@@ -89,7 +107,7 @@ def main():
                 'origin': [-2.0, -6.0]
             }
         # import pdb;pdb.set_trace()
-        path_pix_x, path_pix_y = local_path_to_pixels(local_path_4, map_metadata)
+        path_pix_x, path_pix_y = local_path_to_pixels(local_path_1, map_metadata)
         print(rgb_map_array.shape[:-1])
         gt_costmap = torch.zeros(rgb_map_array.shape[:-1])
 

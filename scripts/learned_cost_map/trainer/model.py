@@ -98,6 +98,37 @@ class CostModelEfficientNet(nn.Module):
         output = self.sigmoid(output)
         return output
 
+class CostFourierVelModelEfficientNet(nn.Module):
+    def __init__(self, input_channels, ff_size, embedding_size, output_size, pretrained=False):
+        super().__init__()
+        self.model = models.efficientnet_b0(pretrained)
+        self.model.features[0][0] = nn.Conv2d(in_channels=input_channels, out_channels=32, kernel_size=(3,3), stride=(2,2), padding=(1,1), bias=False)
+        self.model.classifier[1] = nn.Linear(in_features=1280, out_features=embedding_size, bias=True)
+
+        self.vel_mlp = nn.Sequential(
+            nn.Linear(in_features=ff_size*2, out_features=512),
+            nn.ReLU(),
+            nn.Linear(in_features=512, out_features=512),
+            nn.ReLU(),
+            nn.Linear(in_features=512, out_features=512),
+            nn.ReLU()
+        )
+
+        self.output_mlp = nn.Sequential(
+            nn.Linear(in_features=embedding_size+512, out_features=output_size)
+        )
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, input_data):
+        x = input_data["patches"]
+        vel = input_data["fourier_vels"]
+        processed_maps = self.model(x)
+        processed_vel  = self.vel_mlp(vel)
+        combined_features = torch.cat([processed_maps, processed_vel], dim=1)
+        output = self.output_mlp(combined_features)
+        output = self.sigmoid(output)
+        return output
+
 if __name__ == "__main__":
     model = CostModelEfficientNet(8, 1)
     print(model)
