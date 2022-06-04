@@ -4,7 +4,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel
+from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostFourierVelModelEfficientNet
 from learned_cost_map.utils.costmap_utils import produce_costmap
 
 from learned_cost_map.trainer.utils import *
@@ -34,6 +34,9 @@ def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=
         model = CostVelModel(input_channels=8, embedding_size=512, output_size=1)
     elif model_name=="CostFourierVelModel":
         model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+        fourier_freqs = torch.load(saved_freqs)
+    elif model_name=="CostFourierVelModelEfficientNet":
+        model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
         fourier_freqs = torch.load(saved_freqs)
     else:
         raise NotImplementedError()

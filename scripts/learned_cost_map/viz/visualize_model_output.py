@@ -6,7 +6,7 @@ from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.gridspec as gridspec
 from learned_cost_map.trainer.utils import get_dataloaders, preprocess_data
-from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel
+from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostFourierVelModelEfficientNet
 from learned_cost_map.terrain_utils.terrain_map_tartandrive import get_local_path
 from learned_cost_map.utils.costmap_utils import local_path_to_pixels
 from learned_cost_map.utils.util import quat_to_yaw
@@ -126,6 +126,9 @@ def main(model_name, saved_model, saved_freqs):
         model = CostVelModel(input_channels=8, embedding_size=512, output_size=1)
     elif model_name=="CostFourierVelModel":
         model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+        fourier_freqs = torch.load(saved_freqs)
+    elif model_name=="CostFourierVelModelEfficientNet":
+        model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
         fourier_freqs = torch.load(saved_freqs)
     else:
         raise NotImplementedError()

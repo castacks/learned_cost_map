@@ -12,7 +12,7 @@ from nav_msgs.msg import OccupancyGrid, MapMetaData
 import time
 
 from learned_cost_map.utils.costmap_utils import produce_costmap, rosmsgs_to_maps
-from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel
+from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostFourierVelModelEfficientNet
 
 
 class CostmapNode(object):
@@ -32,6 +32,9 @@ class CostmapNode(object):
             self.model = CostVelModel(input_channels=8, embedding_size=512, output_size=1)
         elif model_name=="CostFourierVelModel":
             self.model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+            self.fourier_freqs = torch.load(saved_freqs)
+        elif model_name=="CostFourierVelModelEfficientNet":
+            model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
             self.fourier_freqs = torch.load(saved_freqs)
         else:
             raise NotImplementedError()
