@@ -1,9 +1,11 @@
 import numpy as np
 import torch
+import os
 from torch.utils.data import DataLoader
 from torchvision import transforms as T
 from learned_cost_map.terrain_utils.terrain_map_tartandrive import TerrainMap, get_local_path
 from learned_cost_map.dataloader.TartanDriveDataset import DatasetBase, data_transform
+from learned_cost_map.dataloader.TartanDriveBalancedDataset import BalancedTartanDrive, balanced_data_transform
 
 import time
 
@@ -83,16 +85,13 @@ def FourierFeatureMapping(data, B):
 
     return fourier_data
 
-def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, use_multi_epochs_loader=True):
-    # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
-    # train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
-    # val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
-
-    # datatypes = "img0,img1,imgc,disp0,heightmap,rgbmap,cmd,odom,cost,patches,imu"
-    # base_mod_lengths = [1,1,1,1,1,1,1,1,1,1,10]
+def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data, use_multi_epochs_loader=True):
+    
 
     print("Inside utils/get_dataloaders")
     before_time = time.time()
+
+
     datatypes = "imgc,heightmap,rgbmap,odom,cost,patches"
     base_mod_lengths = [1,1,1,10,10,1]
     modality_lengths = [seq_length*l for l in base_mod_lengths]
@@ -105,16 +104,18 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
                             imu_freq = 10,
                             frame_skip = 0, 
                             frame_stride=5,
-                            augment_data=True)
+                            augment_data=augment_data)
     val_set = DatasetBase(val_split,
-                          dataroot= data_root_dir,
-                          datatypes = datatypes,
-                          modalitylens = modality_lengths,
-                          transform=data_transform,
-                          imu_freq = 10,
-                          frame_skip = 0, 
-                          frame_stride=5,
-                          augment_data=False)
+                        dataroot= data_root_dir,
+                        datatypes = datatypes,
+                        modalitylens = modality_lengths,
+                        transform=data_transform,
+                        imu_freq = 10,
+                        frame_skip = 0, 
+                        frame_stride=5,
+                        augment_data=False)
+
+
 
     if use_multi_epochs_loader:
         loader_class = MultiEpochsDataLoader
@@ -125,6 +126,23 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
     train_loader = loader_class(dataset=train_set, batch_size=batch_size, shuffle=shuffle_train, num_workers=num_workers, pin_memory=True)
 
     val_loader = loader_class(dataset=val_set, batch_size=batch_size, shuffle=shuffle_val, num_workers=num_workers, pin_memory=True)
+
+    return train_loader, val_loader
+
+def get_balanced_dataloaders(batch_size, data_root_dir, augment_data=True, high_cost_prob=None):
+    
+    data_train_lc_dir = os.path.join(data_root_dir, "train", "low_cost")
+    data_train_hc_dir = os.path.join(data_root_dir, "train", "high_cost")
+
+    data_val_lc_dir = os.path.join(data_root_dir, "val", "low_cost")
+    data_val_hc_dir = os.path.join(data_root_dir, "val", "high_cost")
+
+    train_set = BalancedTartanDrive(data_train_lc_dir, data_train_hc_dir, balanced_data_transform, augment_data=augment_data, high_cost_prob=high_cost_prob)
+
+    val_set = BalancedTartanDrive(data_val_lc_dir, data_val_hc_dir, balanced_data_transform, augment_data=False, high_cost_prob=high_cost_prob)
+
+    train_loader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False)
+    val_loader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False)
 
     return train_loader, val_loader
 

@@ -73,7 +73,7 @@ def patches_to_imgs(patches_tensor):
         height_maps:
             Array(N, H, W, C)->Float containing height map information for each patch, where C=2. TBD whether the two channel dimensions correspond to min/max or mean/std.
     '''
-    if patches_tensor.shape[0] == 1 or len(patches_tensor.shape) < 4:
+    if len(patches_tensor.shape) < 4:
         raise NotImplementedError
 
     # import pdb;pdb.set_trace()

@@ -153,7 +153,7 @@ class TerrainMap:
 
         crop_xs = torch.linspace(-crop_height/2., crop_height/2., output_height).to(self.device)
         crop_ys = torch.linspace(-crop_width/2., crop_width/2., output_width).to(self.device)
-        crop_positions = torch.stack(torch.meshgrid(crop_xs, crop_ys, indexing="ij"), dim=-1) # HxWx2 tensor
+        crop_positions = torch.stack(torch.meshgrid(crop_xs, crop_ys, indexing="ij"), dim=-1).double() # HxWx2 tensor
 
         ## Obtain translations and rotations for 2D rigid body transformation
         translations = poses[:, :2]  # Nx2 tensor, [x, y] in metric space
