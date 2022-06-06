@@ -78,6 +78,9 @@ def FourierFeatureMapping(data, B):
         data = data.view(*data.shape, 1)
         B = B.view(1, *B.shape)  
 
+    data = data.float()
+    B = B.float()
+    
     data_cos = torch.cos(2*torch.pi*torch.matmul(B,data)).squeeze()
     data_sin = torch.sin(2*torch.pi*torch.matmul(B,data)).squeeze()
 

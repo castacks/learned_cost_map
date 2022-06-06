@@ -190,7 +190,7 @@ class BalancedTartanDrive(Dataset):
 
         all_data_elem = self.all_data[all_data_idx]
 
-        print(f"Get item {all_data_elem} with index {all_data_idx}")
+        # print(f"Get item {all_data_elem} with index {all_data_idx}")
 
         if all_data_elem[1] == 0:
             # Low cost
@@ -320,7 +320,7 @@ class BalancedTartanDrive(Dataset):
                  
         assert ((len(low_cost_tuples) == 0) and (len(high_cost_tuples) == 0)), "Did not include all samples"
         
-        print(all_data)
+        # print(all_data)
 
         return all_data
 
