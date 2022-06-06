@@ -129,13 +129,13 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
 
     return train_loader, val_loader
 
-def get_balanced_dataloaders(batch_size, data_root_dir, augment_data=True, high_cost_prob=None):
+def get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, augment_data=True, high_cost_prob=None):
     
-    data_train_lc_dir = os.path.join(data_root_dir, "train", "low_cost")
-    data_train_hc_dir = os.path.join(data_root_dir, "train", "high_cost")
+    data_train_lc_dir = os.path.join(data_root_dir, train_lc_dir)
+    data_train_hc_dir = os.path.join(data_root_dir, train_hc_dir)
 
-    data_val_lc_dir = os.path.join(data_root_dir, "val", "low_cost")
-    data_val_hc_dir = os.path.join(data_root_dir, "val", "high_cost")
+    data_val_lc_dir = os.path.join(data_root_dir, val_lc_dir)
+    data_val_hc_dir = os.path.join(data_root_dir, val_hc_dir)
 
     train_set = BalancedTartanDrive(data_train_lc_dir, data_train_hc_dir, balanced_data_transform, augment_data=augment_data, high_cost_prob=high_cost_prob)
 

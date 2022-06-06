@@ -60,7 +60,7 @@ def get_val_metrics(model, val_loader, fourier_freqs=None):
 
 
 def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
-         grad_clip=None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None):
+         grad_clip=None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, train_lc_dir=None, train_hc_dir=None, val_lc_dir=None, val_hc_dir=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None):
 
     if (data_root_dir is None) or (train_split is None) or (val_split is None):
         raise NotImplementedError()
@@ -69,9 +69,13 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
     print("Getting data loaders")
     time_data = time.time()
     if balanced_loader:
-        train_loader, val_loader = get_balanced_dataloaders(batch_size, data_root_dir, augment_data=augment_data, high_cost_prob=high_cost_prob)
+        assert ((train_lc_dir is not None) and (train_hc_dir is not None) and (val_lc_dir is not None) and (val_hc_dir is not None)), "balanced_loader needs train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir to NOT be None."
+
+        train_loader, val_loader = get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, augment_data=augment_data, high_cost_prob=high_cost_prob)
     else:
-        train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, balanced_loader, num_workers, shuffle_train, shuffle_val, augment_data=augment_data)
+        assert ((train_split is not None) and (val_split is not None)), "Standard dataloader needs train_split, val_split to NOT be None."
+
+        train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=augment_data)
     print(f"Got data loaders. {time.time()-time_data}")
 
     ## Set up model
@@ -114,7 +118,10 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
             'grad_clip': grad_clip,
             'num_epochs': num_epochs,
             'eval_interval': eval_interval,
-            "pretrained": pretrained
+            "pretrained": pretrained,
+            'balanced_loader': balanced_loader,
+            'augment_data': augment_data,
+            'high_cost_prob': high_cost_prob
         }
         print("Training configuration: ")
         print(config)
@@ -165,6 +172,10 @@ if __name__ == '__main__':
     parser.add_argument('--val_split', type=str, required=True, help='Path to the file that contains the validation split text file.')
     parser.add_argument('--log_dir', type=str, required=True, help='String for where the models will be saved.')
     parser.add_argument('--balanced_loader', action='store_true', help="Use the balanced dataloader implemented in TartanDriveBalancedDataset.")
+    parser.add_argument('--train_lc_dir', type=str, help='Name of directory where the low cost training set is located. Relative to data_dir. Only required if balanced_loader flag is present.')
+    parser.add_argument('--train_hc_dir', type=str, help='Name of directory where the high cost training set is located. Relative to data_dir. Only required if balanced_loader flag is present.')
+    parser.add_argument('--val_lc_dir', type=str, help='Name of directory where the low cost validation set is located. Relative to data_dir. Only required if balanced_loader flag is present.')
+    parser.add_argument('--val_hc_dir', type=str, help='Name of directory where the high cost validation set is located. Relative to data_dir. Only required if balanced_loader flag is present.')
     parser.add_argument("-n", "--num_epochs", type=int, default=50, help="Number of epochs for training.")
     parser.add_argument("-b", "--batch_size", type=int, default=16, help="Batch size for training.")
     parser.add_argument("--seq_length", type=int, default=1, help="Length of sequence used for training. See TartanDriveDataset for more details.")
@@ -206,6 +217,10 @@ if __name__ == '__main__':
          train_split=args.train_split, 
          val_split=args.val_split,
          balanced_loader=args.balanced_loader,
+         train_lc_dir=args.train_lc_dir,
+         train_hc_dir=args.train_hc_dir,
+         val_lc_dir=args.val_lc_dir,
+         val_hc_dir=args.val_hc_dir,
          num_workers=args.num_workers, 
          shuffle_train=args.shuffle_train, 
          shuffle_val=args.shuffle_val,
