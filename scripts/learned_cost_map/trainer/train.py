@@ -62,7 +62,7 @@ def get_val_metrics(model, val_loader, fourier_freqs=None):
 def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
          grad_clip=None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, train_lc_dir=None, train_hc_dir=None, val_lc_dir=None, val_hc_dir=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None):
 
-    if (data_root_dir is None) or (train_split is None) or (val_split is None):
+    if (data_root_dir is None):
         raise NotImplementedError()
 
     ## Obtain DataLoaders
