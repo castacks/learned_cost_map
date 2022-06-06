@@ -57,8 +57,6 @@ echo Running standard split
 ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --model $MODEL \
     --data_dir $DATA_DIR \
-    --train_split $TRAIN_SPLIT \
-    --val_split $VAL_SPLIT \
     --log_dir $RUN_NAME \
     --balanced_loader \
     --train_lc_dir $TRAIN_LC_DIR \
