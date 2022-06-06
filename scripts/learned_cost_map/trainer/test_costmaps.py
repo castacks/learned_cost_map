@@ -7,7 +7,7 @@ import torch.optim as optim
 from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostFourierVelModelEfficientNet
 from learned_cost_map.utils.costmap_utils import produce_costmap
 
-from learned_cost_map.trainer.utils import *
+from learned_cost_map.trainer.utils import get_dataloaders, get_balanced_dataloaders, preprocess_data, avg_dict, get_FFM_freqs, tensor_to_img
 from math import ceil
 import matplotlib.pyplot as plt
 import time
@@ -24,7 +24,7 @@ def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=
     num_workers = 1
     shuffle_train = False
     shuffle_val = False
-    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
+    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=False)
 
     # import pdb;pdb.set_trace()
     fourier_freqs = None

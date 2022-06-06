@@ -12,8 +12,6 @@ import torch
 from torchvision import transforms as T
 from torchvision.datasets import DatasetFolder
 from learned_cost_map.terrain_utils.terrain_map_tartandrive import TerrainMap, get_local_path
-from learned_cost_map.viz.visualize_model_output import patches_to_imgs
-from learned_cost_map.trainer.utils import preprocess_data
 
 def balanced_data_transform(sample, augment_data=False):
     # import pdb;pdb.set_trace()
@@ -354,52 +352,17 @@ if __name__ == '__main__':
 
 
 
+    # train_loader = DataLoader(dataset=dataset, batch_size=10, shuffle=True)
 
+    # for i, sample in enumerate(train_loader):
+    #     # import pdb;pdb.set_trace()
+    #     print(f"Sample {i}")
+    #     print(sample["cost"].shape)
 
-
-    # train_set = DatasetBase(train_split,
-    #                         dataroot= data_root_dir,
-    #                         datatypes = datatypes,
-    #                         modalitylens = modality_lengths,
-    #                         transform=data_transform,
-    #                         imu_freq = 10,
-    #                         frame_skip = 0, 
-    #                         frame_stride=5,
-    #                         augment_data=True)
-    # val_set = DatasetBase(val_split,
-    #                       dataroot= data_root_dir,
-    #                       datatypes = datatypes,
-    #                       modalitylens = modality_lengths,
-    #                       transform=data_transform,
-    #                       imu_freq = 10,
-    #                       frame_skip = 0, 
-    #                       frame_stride=5,
-    #                       augment_data=False)
-
-    # if use_multi_epochs_loader:
-    #     loader_class = MultiEpochsDataLoader
-    # else:
-    #     loader_class = DataLoader
-
-    
-    # train_loader = loader_class(dataset=train_set, batch_size=batch_size, shuffle=shuffle_train, num_workers=num_workers, pin_memory=True)
-
-    # val_loader = loader_class(dataset=val_set, batch_size=batch_size, shuffle=shuffle_val, num_workers=num_workers, pin_memory=True)
-
-
-    train_loader = DataLoader(dataset=dataset, batch_size=10, shuffle=True)
-
-    for i, sample in enumerate(train_loader):
-        # import pdb;pdb.set_trace()
-        print(f"Sample {i}")
-        print(sample["cost"].shape)
-
-        patches = sample['patches']
-        rgb_maps, height_maps = patches_to_imgs(patches)
-        for j in range(rgb_maps.shape[0]):
-            plt.imshow(rgb_maps[j])
-            cost = sample['cost'][j].item()
-            plt.title(f"Cost is {cost}")
-            plt.show()
-
-        input_data, labels = preprocess_data(sample)
+    #     patches = sample['patches']
+    #     rgb_maps, height_maps = patches_to_imgs(patches)
+    #     for j in range(rgb_maps.shape[0]):
+    #         plt.imshow(rgb_maps[j])
+    #         cost = sample['cost'][j].item()
+    #         plt.title(f"Cost is {cost}")
+    #         plt.show()

@@ -6,12 +6,115 @@ from torchvision import transforms as T
 import torch.nn as nn
 import torch.optim as optim
 from learned_cost_map.trainer.model import CostModel
+from learned_cost_map.terrain_utils.terrain_map_tartandrive import TerrainMap
+from learned_cost_map.trainer.utils import get_dataloaders, get_balanced_dataloaders, preprocess_data, avg_dict, get_FFM_freqs, FourierFeatureMapping
 
-from learned_cost_map.trainer.utils import *
 from math import ceil
 import matplotlib.pyplot as plt
 import time
 
+
+bgr_to_rgb = lambda img: img[[2,1,0],:,:] 
+    
+transform_to_img = T.Compose([
+    T.Normalize(mean = [0., 0., 0.], std  = [1/0.229, 1/0.224, 1/0.225]),
+    T.Normalize(mean = [-0.485, -0.456, -0.406], std  = [1., 1., 1.]),
+    T.Lambda(bgr_to_rgb),
+    T.ToPILImage(),
+    np.asarray
+])
+
+
+def tensor_to_img(img_tensor):
+    '''Converts a tensor representing an image into a numpy array that can be directly used for plotting purposes.
+
+    Args:
+        img_tensor:
+            Tensor(C,H,W)->Float or Tensor(H,W)->Float representing image
+    Returns:
+        img_plot:
+            Array(H,W,C)->Uint8 or Array(H,W)->Uint8 image ready to be plotted
+    '''
+    if img_tensor.shape[0] == 1 or len(img_tensor.shape) < 3:
+        raise NotImplementedError
+
+    img_plot = transform_to_img(img_tensor)
+
+    return img_plot
+
+def tensor_to_heightmap(heightmap_tensor):
+    '''Converts a heightmap tensor into an array that can be directly used for plotting purposes.
+
+    Args:
+        heightmap_tensor:
+            Tensor(C,H,W)->Float representing heightmap, where C=5 and corresponds to the following channels: min height, max height, mean height, std height, invalid mask. These maps are in the [0,1] range,and were normalized using values min=-2, max=2, and x_norm = x-min/(max-min).
+        Returns:
+            heightmap_array:
+                Array(H,W,C)->Float heightmap, where C=2, and in this case correspond to the unnormalized min and max values for the heightmap.
+    '''
+
+    unnorm_height_map = 4*heightmap_tensor[:-1,] - 2
+    # import pdb;pdb.set_trace()
+    # nan_idx = torch.nonzero(heightmap_tensor[-1] == 1)
+    # for channel in range(unnorm_height_map.shape[0]):
+    #     unnorm_height_map[channel][nan_idx] = torch.nan
+    heightmap_array = unnorm_height_map[0:2].permute(1,2,0).detach().cpu().numpy()
+
+    return heightmap_array
+
+
+def patches_to_imgs(patches_tensor):
+    '''Converts a tensor of map patches into two numpy arrays: One that contains the batched RGB data for each patch into a form that can be directly plotted if iterated over, and one that contains the batched heightmap information.
+
+    Args:
+        patches_tensor:
+            Tensor(N, C, H, W)->Float representing N map patches, where N corresponds to the lookahead.
+    Returns:
+        rgb_maps:
+            Array(N, H, W, C)->Uint8 containing RGB map information for each patch, where C=3
+        height_maps:
+            Array(N, H, W, C)->Float containing height map information for each patch, where C=2. TBD whether the two channel dimensions correspond to min/max or mean/std.
+    '''
+    if len(patches_tensor.shape) < 4:
+        raise NotImplementedError
+
+    # import pdb;pdb.set_trace()
+    rgb_maps_tensor = patches_tensor[:,0:3, :, :]
+    height_maps_tensor = patches_tensor[:, 3:, :, :]
+
+    # Process rgb maps
+    rgb_imgs = []
+    for img in rgb_maps_tensor:
+        rgb_img = transform_to_img(img)
+        rgb_imgs.append(rgb_img)
+    rgb_maps = np.stack(rgb_imgs, axis=0)
+
+    # Process height maps
+    # Remember: need to unnormalize
+    height_maps = []
+    for hm in height_maps_tensor:
+        height_map = tensor_to_heightmap(hm)
+        height_maps.append(height_map)
+    height_maps = np.stack(height_maps, axis=0)
+
+    return rgb_maps, height_maps
+
+def process_invalid_patches(patches, thresh=0.5):
+    '''Takes in a tensor of patches and returns a tensor of ones and zeros, with ones signaling an invalid patch so that the cost can be set appropriately.
+
+    Args:
+        - patches:
+            Tensor of shape [B, C, H, W]
+    
+    Returns:    
+        - invalid:
+            Tensor of shape [B]
+    '''
+    invalid_channels = patches[:, -1, :, :]
+    invalid_vals = torch.sum(invalid_channels, dim=(1,2))/(patches.shape[-2]*patches.shape[-1])
+    invalid_flags = invalid_vals > thresh
+
+    return invalid_flags
 
 def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_freqs=None):
     '''Returns a costmap using a trained model from a maps dict.
@@ -80,6 +183,8 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
         #     print(f"Evaluating batch {b}/{num_batches}")
         # import pdb;pdb.set_trace()
         patches = tm.get_crop_batch(poses=all_poses[batch_starts[b]:batch_ends[b]], crop_params=crop_params)
+        print(f"Shape of patches: {patches.shape}")
+        invalid_flags = process_invalid_patches(patches, thresh=0.5)
         # rgb_maps, height_maps = patches_to_imgs(patches)
         # front_img_ax.clear() 
         # front_img_ax.imshow(rgb_maps[0])
@@ -101,9 +206,8 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
             fourier_vels = None
         input_data['vels'] = vels_vec
         input_data['fourier_vels'] = fourier_vels
-        # import pdb;pdb.set_trace()
         costs = model(input_data).detach()
-        # costs = torch.rand_like(costs)
+        # costs[invalid_flags] = 1.0 # TODO Uncomment this line if you want to set high costs to invalid areas
         all_costs.append(costs.squeeze())
         # plt.pause(0.1)
     all_costs = torch.cat(all_costs, 0)
@@ -120,6 +224,8 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
     costmap = costmap.cpu().numpy()
 
     return costmap
+
+
 
 def rosmsgs_to_maps(rgbmap, heightmap):
     '''Converts input rgbmaps and heightmaps from numpy arrays incoming from ros msgs to tensors that can be passed into produce_costmap.

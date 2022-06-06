@@ -153,7 +153,7 @@ class TerrainMap:
 
         crop_xs = torch.linspace(-crop_height/2., crop_height/2., output_height).to(self.device)
         crop_ys = torch.linspace(-crop_width/2., crop_width/2., output_width).to(self.device)
-        crop_positions = torch.stack(torch.meshgrid(crop_xs, crop_ys, indexing="ij"), dim=-1).double() # HxWx2 tensor
+        crop_positions = torch.stack(torch.meshgrid(crop_xs, crop_ys, indexing="ij"), dim=-1) # HxWx2 tensor
 
         ## Obtain translations and rotations for 2D rigid body transformation
         translations = poses[:, :2]  # Nx2 tensor, [x, y] in metric space
@@ -161,9 +161,9 @@ class TerrainMap:
         rotations = torch.stack([torch.cos(yaws), -torch.sin(yaws), torch.sin(yaws), torch.cos(yaws)], dim=-1)  # Nx4 tensor where each row corresponds to [cos(theta), -sin(theta), sin(theta), cos(theta)]
 
         ## Reshape tensors to perform batch tensor multiplication. 
-        rotations = rotations.view(-1, 1, 1, 2, 2) #[B x 1 x 1 x 2 x 2]
-        crop_positions = crop_positions.view(1, *crop_params['output_size'], 2, 1) #[1 x H x W x 2 x 1]
-        translations = translations.view(-1, 1, 1, 2, 1) #[B x 1 x 1 x 2 x 1]
+        rotations = rotations.view(-1, 1, 1, 2, 2).double() #[B x 1 x 1 x 2 x 2]
+        crop_positions = crop_positions.view(1, *crop_params['output_size'], 2, 1).double() #[1 x H x W x 2 x 1]
+        translations = translations.view(-1, 1, 1, 2, 1).double() #[B x 1 x 1 x 2 x 1]
 
         # Apply each transform to all crop positions (res = [B x H x W x 2])
         crop_positions_transformed = (torch.matmul(rotations, crop_positions) + translations).squeeze()
