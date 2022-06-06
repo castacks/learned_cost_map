@@ -132,7 +132,7 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
 
     return train_loader, val_loader
 
-def get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, augment_data=True, high_cost_prob=None):
+def get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, augment_data=True, high_cost_prob=None, use_multi_epochs_loader=True):
     
     data_train_lc_dir = os.path.join(data_root_dir, train_lc_dir)
     data_train_hc_dir = os.path.join(data_root_dir, train_hc_dir)
@@ -144,8 +144,13 @@ def get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_d
 
     val_set = BalancedTartanDrive(data_val_lc_dir, data_val_hc_dir, balanced_data_transform, augment_data=False, high_cost_prob=high_cost_prob)
 
-    train_loader = DataLoader(dataset=train_set, batch_size=batch_size, shuffle=False)
-    val_loader = DataLoader(dataset=val_set, batch_size=batch_size, shuffle=False)
+    if use_multi_epochs_loader:
+        loader_class = MultiEpochsDataLoader
+    else:
+        loader_class = DataLoader
+
+    train_loader = loader_class(dataset=train_set, batch_size=batch_size, shuffle=False)
+    val_loader = loader_class(dataset=val_set, batch_size=batch_size, shuffle=False)
 
     return train_loader, val_loader
 
