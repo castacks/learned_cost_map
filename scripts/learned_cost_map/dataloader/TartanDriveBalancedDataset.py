@@ -172,6 +172,7 @@ class BalancedTartanDrive(Dataset):
         self.N_lc = self.odoms_lc.shape[0]
         self.N_hc = self.odoms_hc.shape[0]
         self.N = self.N_lc + self.N_hc
+        print(f"Total frames: {self.N}. {self.N_lc} low cost + {self.N_hc} high cost.")
 
         if high_cost_prob is None:
             self.high_cost_prob = 1 - self.N_hc/self.N
@@ -182,10 +183,9 @@ class BalancedTartanDrive(Dataset):
         self.all_data = self.build_indices(self.high_cost_prob)
 
     def __len__(self):
-        return 100 #self.N
+        return self.N
 
     def __getitem__(self, all_data_idx):
-        # import pdb;pdb.set_trace()
         sample = {}
 
         all_data_elem = self.all_data[all_data_idx]
