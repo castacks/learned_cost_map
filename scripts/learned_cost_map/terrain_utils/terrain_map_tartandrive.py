@@ -161,9 +161,9 @@ class TerrainMap:
         rotations = torch.stack([torch.cos(yaws), -torch.sin(yaws), torch.sin(yaws), torch.cos(yaws)], dim=-1)  # Nx4 tensor where each row corresponds to [cos(theta), -sin(theta), sin(theta), cos(theta)]
 
         ## Reshape tensors to perform batch tensor multiplication. 
-        rotations = rotations.view(-1, 1, 1, 2, 2).double() #[B x 1 x 1 x 2 x 2]
-        crop_positions = crop_positions.view(1, *crop_params['output_size'], 2, 1).double() #[1 x H x W x 2 x 1]
-        translations = translations.view(-1, 1, 1, 2, 1).double() #[B x 1 x 1 x 2 x 1]
+        rotations = rotations.view(-1, 1, 1, 2, 2).float() #[B x 1 x 1 x 2 x 2]
+        crop_positions = crop_positions.view(1, *crop_params['output_size'], 2, 1).float() #[1 x H x W x 2 x 1]
+        translations = translations.view(-1, 1, 1, 2, 1).float() #[B x 1 x 1 x 2 x 1]
 
         # Apply each transform to all crop positions (res = [B x H x W x 2])
         crop_positions_transformed = (torch.matmul(rotations, crop_positions) + translations).squeeze()
