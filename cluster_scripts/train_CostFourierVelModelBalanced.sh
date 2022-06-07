@@ -21,7 +21,8 @@ TRAIN_HC_DIR=highcost_10k
 VAL_LC_DIR=lowcost_val_1k
 VAL_HC_DIR=highcost_val_2k
 MODEL=CostFourierVelModel
-RUN_NAME=train_${MODEL}_bal_aug_l2
+FOURIER_SCALE=100.0
+RUN_NAME=train_${MODEL}_bal_aug_l2_scale_${FOURIER_SCALE}
 NUM_EPOCHS=50
 BATCH_SIZE=1024
 SEQ_LENGTH=1
@@ -73,6 +74,7 @@ ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --num_workers $NUM_WORKERS\
     --multiple_gpus \
     --augment_data 
+    --fourier_scale $FOURIER_SCALE
     # --pretrained
 
 echo Training CostFourierVelModel network shell script ends.
