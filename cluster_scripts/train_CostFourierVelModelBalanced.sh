@@ -73,7 +73,7 @@ ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --save_interval $SAVE_INTERVAL \
     --num_workers $NUM_WORKERS\
     --multiple_gpus \
-    --augment_data 
+    --augment_data \
     --fourier_scale $FOURIER_SCALE
     # --pretrained
 
