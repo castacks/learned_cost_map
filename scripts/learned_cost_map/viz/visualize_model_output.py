@@ -26,7 +26,7 @@ def main(model_name, saved_model, saved_freqs):
     num_workers = 4
     shuffle_train = False
     shuffle_val = False
-    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
+    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=False)
 
     fig = plt.figure()
     spec = gridspec.GridSpec(ncols=5, nrows=4, figure=fig)
@@ -164,7 +164,7 @@ def main(model_name, saved_model, saved_freqs):
         plt.subplots_adjust(wspace=1.5)
         if i == 0:
             plt.pause(5)
-        plt.pause(1)
+        plt.pause(0.05)
         # plt.show()
         # cb_gt.remove()
         # cb_pred.remove()
@@ -175,6 +175,10 @@ if __name__=="__main__":
     # saved_model = "/home/mateo/models/train_CostVelModel/epoch_50.pt"
     # saved_freqs = None
 
-    saved_model = "/home/mateo/models/train_CostFourierVelModel/epoch_50.pt"
-    saved_freqs = "/home/mateo/models/train_CostFourierVelModel/fourier_freqs.pt"
+    # saved_model = "/home/mateo/models/train_CostFourierVelModel/epoch_50.pt"
+    # saved_freqs = "/home/mateo/models/train_CostFourierVelModel/fourier_freqs.pt"
+
+    saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_bal_aug_l2/epoch_50.pt"
+    saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_bal_aug_l2/fourier_freqs.pt"
+
     main(model_name, saved_model, saved_freqs)

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo Running shell script that trains network with a given split.
+echo Running shell script that trains CostModel network with balanced data with a given split.
 
 # Define python version
 EXE_PYTHON=python3
@@ -11,27 +11,23 @@ EXE_PYTHON=python3
 PACKAGE_DIR=/data/datasets/mguamanc/learned_cost_map
 BASE_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/trainer
 
-# # Variables for generating data split:
-# PY_SPLIT=create_split.py
-# NUM_TRAIN=500
-# NUM_VAL=50
-# ALL_TRAIN_FP=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/tartandrive_train.txt
-# ALL_VAL_FP=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/tartandrive_val.txt
-# OUTPUT_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits
-
 # Variables for trainer
 PY_TRAIN=train.py
-DATA_DIR=/project/learningphysics/tartandrive_trajs
-TRAIN_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/tartandrive_train.txt
-VAL_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/tartandrive_val.txt
+DATA_DIR=/project/learningphysics/tartancost_data
+# TRAIN_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/train_uniform.txt
+# VAL_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/val_uniform.txt
+TRAIN_LC_DIR=lowcost_5k
+TRAIN_HC_DIR=highcost_10k
+VAL_LC_DIR=lowcost_val_1k
+VAL_HC_DIR=highcost_val_2k
 MODEL=CostModel
-RUN_NAME=train_${MODEL}_aug
+RUN_NAME=train_${MODEL}_bal_aug_l2
 NUM_EPOCHS=50
-BATCH_SIZE=128
+BATCH_SIZE=1024
 SEQ_LENGTH=1
-LEARNING_RATE=0.001
+LEARNING_RATE=0.0003
+WEIGHT_DECAY=0.0000001
 GAMMA=0.95
-WEIGHT_DECAY=0.000001
 EVAL_INTERVAL=1
 SAVE_INTERVAL=1
 NUM_WORKERS=10
@@ -61,21 +57,22 @@ echo Running standard split
 ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --model $MODEL \
     --data_dir $DATA_DIR \
-    --train_split $TRAIN_SPLIT \
-    --val_split $VAL_SPLIT \
     --log_dir $RUN_NAME \
+    --balanced_loader \
+    --train_lc_dir $TRAIN_LC_DIR \
+    --train_hc_dir $TRAIN_HC_DIR \
+    --val_lc_dir $VAL_LC_DIR \
+    --val_hc_dir $VAL_HC_DIR \
     --num_epochs $NUM_EPOCHS \
     --batch_size $BATCH_SIZE \
-    --seq_length $SEQ_LENGTH \
     -lr $LEARNING_RATE \
     --gamma $GAMMA \
     --weight_decay $WEIGHT_DECAY \
     --eval_interval $EVAL_INTERVAL \
     --save_interval $SAVE_INTERVAL \
     --num_workers $NUM_WORKERS\
-    --shuffle_train \
     --multiple_gpus \
-    --shuffle_train \
+    --augment_data \
     # --pretrained
 
 echo Training CostModel network shell script ends.
