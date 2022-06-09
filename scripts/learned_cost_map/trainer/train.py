@@ -64,7 +64,10 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
 
     if (data_root_dir is None):
         raise NotImplementedError()
-
+    if wanda:
+        print("\n\=====\nROBOT IS WANDA\n=====")
+    else:
+        print("\n\=====\nROBOT IS YAMAHA\n=====")
     ## Obtain DataLoaders
     print("Getting data loaders")
     time_data = time.time()
@@ -244,7 +247,7 @@ if __name__ == '__main__':
     parser.add_argument('--wanda', action='store_true', help="Train or fine-tune using data from Wanda robot.")
     parser.add_argument('--just_eval', action='store_true', help="Just evaluate a model on a dataset without training.")
 
-    parser.set_defaults(balanced_loader=False, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, fine_tune=False, wanda=False, just_eval=True)
+    parser.set_defaults(balanced_loader=False, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, fine_tune=False, wanda=False, just_eval=False)
     args = parser.parse_args()
 
     print(f"grad_clip is {args.grad_clip}")
