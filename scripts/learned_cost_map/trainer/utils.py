@@ -7,6 +7,7 @@ from learned_cost_map.terrain_utils.terrain_map_tartandrive import TerrainMap, g
 from learned_cost_map.dataloader.TartanDriveDataset import DatasetBase, data_transform
 from learned_cost_map.dataloader.TartanDriveBalancedDataset import BalancedTartanDrive, balanced_data_transform
 from learned_cost_map.dataloader.WandaDataset import DatasetBaseWanda, wanda_data_transform
+from learned_cost_map.dataloader.WandaBalancedDataset import BalancedWandaDataset, balanced_wanda_transform
 
 import time
 
@@ -200,6 +201,28 @@ def get_wanda_dataloaders(batch_size, seq_length, data_root_dir, train_split, va
     train_loader = loader_class(dataset=train_set, batch_size=batch_size, shuffle=shuffle_train, num_workers=num_workers, pin_memory=True)
 
     val_loader = loader_class(dataset=val_set, batch_size=batch_size, shuffle=shuffle_val, num_workers=num_workers, pin_memory=True)
+
+    return train_loader, val_loader
+
+def get_balanced_wanda_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, augment_data=True, high_cost_prob=None, use_multi_epochs_loader=True):
+    
+    data_train_lc_dir = os.path.join(data_root_dir, train_lc_dir)
+    data_train_hc_dir = os.path.join(data_root_dir, train_hc_dir)
+
+    data_val_lc_dir = os.path.join(data_root_dir, val_lc_dir)
+    data_val_hc_dir = os.path.join(data_root_dir, val_hc_dir)
+
+    train_set = BalancedWandaDataset(data_train_lc_dir, data_train_hc_dir, balanced_data_transform, augment_data=augment_data, high_cost_prob=high_cost_prob)
+
+    val_set = BalancedWandaDataset(data_val_lc_dir, data_val_hc_dir, balanced_data_transform, augment_data=False, high_cost_prob=high_cost_prob)
+
+    if use_multi_epochs_loader:
+        loader_class = MultiEpochsDataLoader
+    else:
+        loader_class = DataLoader
+
+    train_loader = loader_class(dataset=train_set, batch_size=batch_size, shuffle=False)
+    val_loader = loader_class(dataset=val_set, batch_size=batch_size, shuffle=False)
 
     return train_loader, val_loader
 

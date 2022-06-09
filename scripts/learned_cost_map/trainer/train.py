@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostModelEfficientNet, CostFourierVelModelEfficientNet
 
-from learned_cost_map.trainer.utils import get_dataloaders, get_balanced_dataloaders, preprocess_data, avg_dict, get_FFM_freqs, get_wanda_dataloaders
+from learned_cost_map.trainer.utils import get_dataloaders, get_balanced_dataloaders, preprocess_data, avg_dict, get_FFM_freqs, get_wanda_dataloaders, get_balanced_wanda_dataloaders
 
 import wandb
 import time
@@ -68,11 +68,13 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
     ## Obtain DataLoaders
     print("Getting data loaders")
     time_data = time.time()
-    if balanced_loader:
+    if balanced_loader and (not wanda):
+        print("Using Yamaha balanced loader")
         assert ((train_lc_dir is not None) and (train_hc_dir is not None) and (val_lc_dir is not None) and (val_hc_dir is not None)), "balanced_loader needs train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir to NOT be None."
 
         train_loader, val_loader = get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, augment_data=augment_data, high_cost_prob=high_cost_prob)
-    elif wanda:
+    elif wanda and (not balanced_loader):
+        print("Using Wanda loader")
         assert ((train_split is not None) and (val_split is not None)), "Wanda dataloader needs train_split, val_split to NOT be None."
         map_metadata = {
                 'height': 10.0,
@@ -87,7 +89,14 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
             'output_size': [64,64]
         }
         train_loader, val_loader = get_wanda_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=augment_data, map_metadata=map_metadata, crop_params=crop_params)
+    elif wanda and balanced_loader:
+        print("Using Wanda balanced loader")
+        assert ((train_lc_dir is not None) and (train_hc_dir is not None) and (val_lc_dir is not None) and (val_hc_dir is not None)), "balanced_wanda_loader needs train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir to NOT be None."
+
+        train_loader, val_loader = get_balanced_wanda_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, augment_data=augment_data, high_cost_prob=high_cost_prob)
+        
     else:
+        print("Using Yamaha loader")
         assert ((train_split is not None) and (val_split is not None)), "Standard dataloader needs train_split, val_split to NOT be None."
 
         train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=augment_data)
