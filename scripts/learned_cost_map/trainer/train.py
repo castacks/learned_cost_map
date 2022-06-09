@@ -134,7 +134,10 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
             'balanced_loader': balanced_loader,
             'augment_data': augment_data,
             'high_cost_prob': high_cost_prob,
-            'fourier_scale': fourier_scale
+            'fourier_scale': fourier_scale,
+            'fine_tune': fine_tune,
+            'saved_model': saved_model,
+            'saved_freqs': saved_freqs
         }
         print("Training configuration: ")
         print(config)
