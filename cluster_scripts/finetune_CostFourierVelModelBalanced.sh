@@ -31,8 +31,8 @@ GAMMA=0.99
 EVAL_INTERVAL=1
 SAVE_INTERVAL=1
 NUM_WORKERS=10
-SAVED_MODEL_DIR=/data/datasets/mguamanc/learned_cost_map/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0/epoch_50.pt
-SAVED_FREQS_DIR=/data/datasets/mguamanc/learned_cost_map/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0/fourier_freqs.pt
+SAVED_MODEL=/data/datasets/mguamanc/learned_cost_map/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0/epoch_50.pt
+SAVED_FREQS=/data/datasets/mguamanc/learned_cost_map/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0/fourier_freqs.pt
 
 
 
@@ -77,8 +77,8 @@ ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --augment_data \
     --fourier_scale $FOURIER_SCALE \
     --fine_tune \
-    --saved_model_dir $SAVED_MODEL_DIR \
-    --saved_freqs_dir $SAVED_FREQS_DIR
+    --saved_model $SAVED_MODEL \
+    --saved_freqs $SAVED_FREQS
     # --pretrained
 
 echo Fine-tuning CostFourierVelModel network shell script ends.
