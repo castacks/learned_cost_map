@@ -60,7 +60,7 @@ def get_val_metrics(model, val_loader, fourier_freqs=None):
 
 
 def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
-         grad_clip=None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, train_lc_dir=None, train_hc_dir=None, val_lc_dir=None, val_hc_dir=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None, fourier_scale=10.0, fine_tune=False, saved_model=None, saved_freqs=None, wanda=False):
+         grad_clip=None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, train_lc_dir=None, train_hc_dir=None, val_lc_dir=None, val_hc_dir=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None, fourier_scale=10.0, fine_tune=False, saved_model=None, saved_freqs=None, wanda=False, just_eval=False):
 
     if (data_root_dir is None):
         raise NotImplementedError()
@@ -110,7 +110,7 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
         model = CostVelModel(input_channels=8, embedding_size=512, output_size=1, pretrained=pretrained)
     elif model_name=="CostFourierVelModel":
         model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1, pretrained=pretrained)
-        if fine_tune:
+        if fine_tune or just_eval:
             assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
             fourier_freqs = torch.load(saved_freqs)
         else:
@@ -119,7 +119,7 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
         model = CostModelEfficientNet(input_channels=8, output_size=1, pretrained=pretrained)
     elif model_name=="CostFourierVelModelEfficientNet":
         model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=16, embedding_size=512, output_size=1, pretrained=pretrained)
-        if fine_tune:
+        if fine_tune or just_eval:
             assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
             fourier_freqs = torch.load(saved_freqs)
         else:
@@ -127,7 +127,7 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
     else:
         raise NotImplementedError()
     
-    if fine_tune:
+    if fine_tune or just_eval:
         assert (saved_model is not None), "saved_model needs to be passed as input"
         print(f"Loading the following model: {saved_model}")
         model.load_state_dict(torch.load(saved_model))
@@ -162,7 +162,8 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
             'fine_tune': fine_tune,
             'saved_model': saved_model,
             'saved_freqs': saved_freqs,
-            'wanda': wanda
+            'wanda': wanda,
+            'just_eval': just_eval
         }
         print("Training configuration: ")
         print(config)
@@ -170,10 +171,11 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
 
 
     for epoch in range(num_epochs):
-        print(f"Training, epoch {epoch}")
-        train_time = time.time()
-        train_metrics = run_train_epoch(model, train_loader, optimizer, scheduler, grad_clip, fourier_freqs)
-        print(f"Training epoch: {time.time()-train_time} s")
+        if not just_eval:
+            print(f"Training, epoch {epoch}")
+            train_time = time.time()
+            train_metrics = run_train_epoch(model, train_loader, optimizer, scheduler, grad_clip, fourier_freqs)
+            print(f"Training epoch: {time.time()-train_time} s")
         print(f"Validation, epoch {epoch}")
         val_time = time.time()
         val_metrics = get_val_metrics(model, val_loader, fourier_freqs)
@@ -181,18 +183,20 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
 
         #TODO : add plotting code for metrics (required for multiple parts)
         if USE_WANDB:
-            train_metrics['epoch'] = epoch
+            if not just_eval:
+                train_metrics['epoch'] = epoch
+                train_metrics = {"train/"+k:v for k,v in train_metrics.items()}
+                wandb.log(data=train_metrics, step=epoch)
             val_metrics['epoch'] = epoch
-            train_metrics = {"train/"+k:v for k,v in train_metrics.items()}
             val_metrics = {"validation/"+k:v for k,v in val_metrics.items()}
-            wandb.log(data=train_metrics, step=epoch)
             wandb.log(data=val_metrics, step=epoch)
 
         if (epoch+1)%eval_interval == 0:
-            print(epoch, train_metrics)
+            if not just_eval:
+                print(epoch, train_metrics)
             print(epoch, val_metrics)
 
-        if (epoch+1)%save_interval == 0:
+        if ((epoch+1)%save_interval == 0) and (not just_eval):
             models_dir = os.path.join("models", log_dir)
             if not os.path.exists(models_dir):
                 os.makedirs(models_dir)
@@ -238,8 +242,9 @@ if __name__ == '__main__':
     parser.add_argument('--saved_model', type=str, help='String for where the saved model that will be used for fine tuning is located.')
     parser.add_argument('--saved_freqs', type=str, help='String for where the saved Fourier frequencies that will be used for fine tuning are located.')
     parser.add_argument('--wanda', action='store_true', help="Train or fine-tune using data from Wanda robot.")
+    parser.add_argument('--just_eval', action='store_true', help="Just evaluate a model on a dataset without training.")
 
-    parser.set_defaults(balanced_loader=False, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, fine_tune=False, wanda=False)
+    parser.set_defaults(balanced_loader=False, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, fine_tune=False, wanda=False, just_eval=True)
     args = parser.parse_args()
 
     print(f"grad_clip is {args.grad_clip}")
@@ -250,6 +255,7 @@ if __name__ == '__main__':
     print(f"fine_tune is {args.fine_tune}")
     print(f"saved_model is {args.saved_model}")
     print(f"wanda is {args.wanda}")
+    print(f"just_eval is {args.just_eval}")
 
     # Run training loop
     main(model_name=args.model,
@@ -282,5 +288,6 @@ if __name__ == '__main__':
          fine_tune=args.fine_tune,
          saved_model=args.saved_model,
          saved_freqs=args.saved_freqs,
-         wanda=args.wanda
+         wanda=args.wanda,
+         just_eval=args.just_eval
          )
