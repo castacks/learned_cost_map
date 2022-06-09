@@ -3,11 +3,11 @@
 # SLURM Resource Parameters
 
 #SBATCH -N 1  # CPU Cores
-#SBATCH -t 0-02:00 # D-HH:MM
+#SBATCH -t 0-01:00 # D-HH:MM
 #SBATCH -p gpu # cpu/gpu/dgx
 #SBATCH --gres=gpu:1
 #SBATCH --mem=8192  # MB
-#SBATCH --job-name=IMU_Cost_Labeler
+#SBATCH --job-name=create_split
 #SBATCH -o /home/mguamanc/job_%j.out
 #SBATCH -e /home/mguamanc/job_%j.err
 #SBATCH --mail-type=ALL # BEGIN, END, FAIL, ALL

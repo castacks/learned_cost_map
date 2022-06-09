@@ -49,19 +49,22 @@ if __name__=="__main__":
 
     parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
     parser.add_argument('--output_dir', type=str, required=True, help='Path to the directory where the training split will be saved.')
+    parser.add_argument('--split_name', type=str, required=True, help='Name of the training split. This training split should be manually modified into train and validation splits later. Example: tartandrive_train.txt')
     args = parser.parse_args()
 
     data_root_dir = args.data_dir #'/project/learningphysics/tartandrive_trajs'
     output_dir = args.output_dir #'/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits'
+    split_name = args.split_name
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    outfile = os.path.join(output_dir, 'tartandrive_train.txt')
+    outfile = os.path.join(output_dir, split_name)
     f = open(outfile, 'w')
 
     trajlist = enumerate_trajs(data_root_dir)
     for trajdir in trajlist:
-        trajindlist = process_traj(data_root_dir + '/' +trajdir)
+        trajdir_path = os.path.join(data_root_dir, trajdir)
+        trajindlist = process_traj(trajdir_path)
         for trajinds in trajindlist:
             f.write(trajdir)
             f.write(' ')
