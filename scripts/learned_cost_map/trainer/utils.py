@@ -6,6 +6,7 @@ from torchvision import transforms as T
 from learned_cost_map.terrain_utils.terrain_map_tartandrive import TerrainMap, get_local_path
 from learned_cost_map.dataloader.TartanDriveDataset import DatasetBase, data_transform
 from learned_cost_map.dataloader.TartanDriveBalancedDataset import BalancedTartanDrive, balanced_data_transform
+from learned_cost_map.dataloader.WandaDataset import DatasetBaseWanda, wanda_data_transform
 
 import time
 
@@ -88,7 +89,7 @@ def FourierFeatureMapping(data, B):
 
     return fourier_data
 
-def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data, use_multi_epochs_loader=True):
+def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=False, use_multi_epochs_loader=True):
     
 
     print("Inside utils/get_dataloaders")
@@ -151,6 +152,54 @@ def get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_d
 
     train_loader = loader_class(dataset=train_set, batch_size=batch_size, shuffle=False)
     val_loader = loader_class(dataset=val_set, batch_size=batch_size, shuffle=False)
+
+    return train_loader, val_loader
+
+def get_wanda_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=False, use_multi_epochs_loader=True, map_metadata=None, crop_params=None):
+    
+    print("Inside utils/get_wanda_dataloaders")
+    before_time = time.time()
+
+
+    datatypes = "imgc,heightmap,rgbmap,odom,cost,patches"
+    base_mod_lengths = [1,1,1,10,10,1]
+    modality_lengths = [seq_length*l for l in base_mod_lengths]
+
+    train_set = DatasetBaseWanda(train_split,
+                            dataroot= data_root_dir,
+                            datatypes = datatypes,
+                            modalitylens = modality_lengths,
+                            transform=wanda_data_transform,
+                            imu_freq = 10,
+                            frame_skip = 0, 
+                            frame_stride=5,
+                            augment_data=augment_data,
+                            map_metadata=map_metadata,
+                            crop_params=crop_params)
+
+    val_set = DatasetBaseWanda(val_split,
+                        dataroot= data_root_dir,
+                        datatypes = datatypes,
+                        modalitylens = modality_lengths,
+                        transform=wanda_data_transform,
+                        imu_freq = 10,
+                        frame_skip = 0, 
+                        frame_stride=5,
+                        augment_data=False,
+                        map_metadata=map_metadata,
+                        crop_params=crop_params)
+
+
+
+    if use_multi_epochs_loader:
+        loader_class = MultiEpochsDataLoader
+    else:
+        loader_class = DataLoader
+
+    
+    train_loader = loader_class(dataset=train_set, batch_size=batch_size, shuffle=shuffle_train, num_workers=num_workers, pin_memory=True)
+
+    val_loader = loader_class(dataset=val_set, batch_size=batch_size, shuffle=shuffle_val, num_workers=num_workers, pin_memory=True)
 
     return train_loader, val_loader
 

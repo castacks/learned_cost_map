@@ -121,14 +121,17 @@ if __name__ == '__main__':
 
     # saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_uni_aug_l2/epoch_50.pt"
     # saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_uni_aug_l2/fourier_freqs.pt"
-    
+
     # saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_bal_aug_l2/epoch_50.pt"
     # saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_bal_aug_l2/fourier_freqs.pt"
 
-    saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModelEfficientNet_uni_aug_l2/epoch_50.pt"
-    saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModelEfficientNet_uni_aug_l2/fourier_freqs.pt"
+    # saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModelEfficientNet_uni_aug_l2/epoch_50.pt"
+    # saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModelEfficientNet_uni_aug_l2/fourier_freqs.pt"
+
+    saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0/epoch_50.pt"
+    saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0/fourier_freqs.pt"
 
 
-    model_name = "CostFourierVelModelEfficientNet"
+    model_name = "CostFourierVelModel"
     vel = 5.0
     main(batch_size = 1, seq_length = 1, model_name=model_name, saved_model=saved_model, saved_freqs=saved_freqs, vel=vel)

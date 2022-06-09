@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostModelEfficientNet, CostFourierVelModelEfficientNet
 
-from learned_cost_map.trainer.utils import get_dataloaders, get_balanced_dataloaders, preprocess_data, avg_dict, get_FFM_freqs
+from learned_cost_map.trainer.utils import get_dataloaders, get_balanced_dataloaders, preprocess_data, avg_dict, get_FFM_freqs, get_wanda_dataloaders
 
 import wandb
 import time
@@ -60,7 +60,7 @@ def get_val_metrics(model, val_loader, fourier_freqs=None):
 
 
 def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
-         grad_clip=None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, train_lc_dir=None, train_hc_dir=None, val_lc_dir=None, val_hc_dir=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None, fourier_scale=10.0, fine_tune=False, saved_model=None, saved_freqs=None):
+         grad_clip=None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, train_lc_dir=None, train_hc_dir=None, val_lc_dir=None, val_hc_dir=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None, fourier_scale=10.0, fine_tune=False, saved_model=None, saved_freqs=None, wanda=False):
 
     if (data_root_dir is None):
         raise NotImplementedError()
@@ -72,6 +72,21 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
         assert ((train_lc_dir is not None) and (train_hc_dir is not None) and (val_lc_dir is not None) and (val_hc_dir is not None)), "balanced_loader needs train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir to NOT be None."
 
         train_loader, val_loader = get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, augment_data=augment_data, high_cost_prob=high_cost_prob)
+    elif wanda:
+        assert ((train_split is not None) and (val_split is not None)), "Wanda dataloader needs train_split, val_split to NOT be None."
+        map_metadata = {
+                'height': 10.0,
+                'width': 10.0,
+                'resolution': 0.02,
+                # 'origin': [0.0, -5.0]
+                'origin': [-2.0, -5.0]
+                }
+
+        crop_params ={
+            'crop_size': [2.0, 2.0],
+            'output_size': [64,64]
+        }
+        train_loader, val_loader = get_wanda_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=augment_data, map_metadata=map_metadata, crop_params=crop_params)
     else:
         assert ((train_split is not None) and (val_split is not None)), "Standard dataloader needs train_split, val_split to NOT be None."
 
@@ -137,7 +152,8 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
             'fourier_scale': fourier_scale,
             'fine_tune': fine_tune,
             'saved_model': saved_model,
-            'saved_freqs': saved_freqs
+            'saved_freqs': saved_freqs,
+            'wanda': wanda
         }
         print("Training configuration: ")
         print(config)
@@ -212,8 +228,9 @@ if __name__ == '__main__':
     parser.add_argument('--fine_tune', action='store_true', help="Augment data.")
     parser.add_argument('--saved_model', type=str, help='String for where the saved model that will be used for fine tuning is located.')
     parser.add_argument('--saved_freqs', type=str, help='String for where the saved Fourier frequencies that will be used for fine tuning are located.')
+    parser.add_argument('--wanda', action='store_true', help="Train or fine-tune using data from Wanda robot.")
 
-    parser.set_defaults(balanced_loader=False, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, fine_tune=False)
+    parser.set_defaults(balanced_loader=False, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, fine_tune=False, wanda=False)
     args = parser.parse_args()
 
     print(f"grad_clip is {args.grad_clip}")
@@ -223,6 +240,7 @@ if __name__ == '__main__':
     print(f"high_cost_prob is {args.high_cost_prob}")
     print(f"fine_tune is {args.fine_tune}")
     print(f"saved_model is {args.saved_model}")
+    print(f"wanda is {args.wanda}")
 
     # Run training loop
     main(model_name=args.model,
@@ -254,5 +272,6 @@ if __name__ == '__main__':
          fourier_scale=args.fourier_scale,
          fine_tune=args.fine_tune,
          saved_model=args.saved_model,
-         saved_freqs=args.saved_freqs
+         saved_freqs=args.saved_freqs,
+         wanda=args.wanda
          )

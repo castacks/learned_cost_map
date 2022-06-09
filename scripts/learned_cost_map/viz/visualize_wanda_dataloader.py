@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.gridspec as gridspec
-from learned_cost_map.trainer.utils import get_dataloaders, preprocess_data
+from learned_cost_map.trainer.utils import get_dataloaders, preprocess_data, get_wanda_dataloaders
 from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostFourierVelModelEfficientNet
 from learned_cost_map.terrain_utils.terrain_map_tartandrive import get_local_path
 from learned_cost_map.utils.costmap_utils import local_path_to_pixels, bgr_to_rgb, transform_to_img, tensor_to_img, tensor_to_heightmap, patches_to_imgs
@@ -14,26 +14,21 @@ from learned_cost_map.utils.util import quat_to_yaw
 
 
 
-def main(model_name, saved_model, saved_freqs, map_metadata=None, crop_params=None):
+def main(data_root_dir, train_split, val_split, model_name, saved_model, saved_freqs, map_metadata=None, crop_params=None):
     batch_size = 1
     seq_length = 1
-    # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
-    # train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
-    # val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
-    data_root_dir = '/home/mateo/Data/SARA/TartanDriveCostTrain'
-    train_split = '/home/mateo/Data/SARA/TartanDriveCostTrain/tartandrive_train.txt'
-    val_split = '/home/mateo/Data/SARA/TartanDriveCostTrain/tartandrive_train.txt'
+    
     num_workers = 4
     shuffle_train = False
     shuffle_val = False
-    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=False)
+    train_loader, val_loader = get_wanda_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=False, map_metadata=map_metadata, crop_params=crop_params)
 
     fig = plt.figure()
-    spec = gridspec.GridSpec(ncols=5, nrows=4, figure=fig)
-    patches_axs  = [fig.add_subplot(spec[0,i]) for i in range(5)] + [fig.add_subplot(spec[1,i]) for i in range(5)]
-    gt_costmap_ax = fig.add_subplot(spec[2:4,0:2])
-    pred_costmap_ax = fig.add_subplot(spec[2:4,3:5])
-    rgb_map_ax = fig.add_subplot(spec[2:4,2])
+    spec = gridspec.GridSpec(ncols=10, nrows=4, figure=fig)
+    patches_axs  = [fig.add_subplot(spec[0,i]) for i in range(10)] + [fig.add_subplot(spec[1,i]) for i in range(10)]
+    gt_costmap_ax = fig.add_subplot(spec[2:4,0:4])
+    pred_costmap_ax = fig.add_subplot(spec[2:4,6:10])
+    rgb_map_ax = fig.add_subplot(spec[2:4,4:6])
 
 
     fourier_freqs = None
@@ -54,7 +49,7 @@ def main(model_name, saved_model, saved_freqs, map_metadata=None, crop_params=No
     model.cuda()
     model.eval()
 
-    for i, data_dict in enumerate(val_loader):
+    for i, data_dict in enumerate(train_loader):
         # Get cost from neural net
         input, labels = preprocess_data(data_dict, fourier_freqs)
         pred_costs = model(input).detach().cpu().squeeze()
@@ -88,15 +83,15 @@ def main(model_name, saved_model, saved_freqs, map_metadata=None, crop_params=No
 
         # Get local odom to plot path:
         odom_tensor = data_dict["odom"][0]
-        odom_tartanvo = data_dict["odom_tartanvo"][0]
+        # odom_tartanvo = data_dict["odom_tartanvo"][0]
         
         # import pdb;pdb.set_trace()
         local_path = get_local_path(odom_tensor)
-        local_path_tartanvo = get_local_path(odom_tartanvo)
+        # local_path_tartanvo = get_local_path(odom_tartanvo)
 
         ## GPS odom is 90 degrees rotated NED To FLU
-        local_path = torch.index_select(local_path, 1, torch.LongTensor([1, 0, 2]))
-        local_path[:,1] = -local_path[:,1]
+        # local_path = torch.index_select(local_path, 1, torch.LongTensor([1, 0, 2]))
+        # local_path[:,1] = -local_path[:,1]
 
         path_pix_x, path_pix_y = local_path_to_pixels(local_path, map_metadata)
         gt_costmap = torch.zeros(rgb_map_array.shape[:-1])
@@ -164,6 +159,15 @@ def main(model_name, saved_model, saved_freqs, map_metadata=None, crop_params=No
         # cb_pred.remove()
 
 if __name__=="__main__":
+
+    # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCostTrain'
+    # train_split = '/home/mateo/Data/SARA/TartanDriveCostTrain/tartandrive_train.txt'
+    # val_split = '/home/mateo/Data/SARA/TartanDriveCostTrain/tartandrive_train.txt'
+
+    data_root_dir = '/home/mateo/Data/SARA/tartancost_wanda'
+    train_split = '/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/splits/wanda_train.txt'
+    val_split = '/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/splits/wanda_train.txt'
+
     model_name = "CostFourierVelModel"
     # saved_model = "/home/mateo/models/train_CostModel2/epoch_50.pt"
     # saved_model = "/home/mateo/models/train_CostVelModel/epoch_50.pt"
@@ -176,10 +180,15 @@ if __name__=="__main__":
     saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_bal_aug_l2/fourier_freqs.pt"
 
     map_metadata = {
-                'height': 12.0,
-                'width': 12.0,
+                'height': 10.0,
+                'width': 10.0,
                 'resolution': 0.02,
-                'origin': [-2.0, -6.0]
+                # 'origin': [0.0, -5.0]
+                'origin': [-2.0, -5.0]
                 }
 
-    main(model_name, saved_model, saved_freqs, map_metadata=map_metadata)
+    crop_params ={
+        'crop_size': [2.0, 2.0],
+        'output_size': [64,64]
+    }
+    main(data_root_dir, train_split, val_split, model_name, saved_model, saved_freqs, map_metadata=map_metadata, crop_params=crop_params)

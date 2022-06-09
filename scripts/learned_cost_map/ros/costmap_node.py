@@ -8,7 +8,7 @@ from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 
 from std_msgs.msg import Header
-from nav_msgs.msg import OccupancyGrid, MapMetaData
+from nav_msgs.msg import OccupancyGrid, MapMetaData, Odometry
 import time
 
 from learned_cost_map.utils.costmap_utils import produce_costmap, rosmsgs_to_maps
@@ -21,8 +21,10 @@ class CostmapNode(object):
 
         rospy.Subscriber('/local_height_map_inflate', Image, self.handle_height_inflate, queue_size=1)
         rospy.Subscriber('/local_rgb_map_inflate', Image, self.handle_rgb_inflate, queue_size=1)
+        rospy.Subscriber('/odometry/filtered_odom', Odometry, self.handle_odom, queue_size=1)
         self.heightmap_inflate = None
         self.rgbmap_inflate = None
+        self.vel = None
 
         # Load trained model to produce costmaps
         self.fourier_freqs = None
@@ -92,14 +94,22 @@ class CostmapNode(object):
         self.rgbmap_inflate = self.cvbridge.imgmsg_to_cv2(msg, "rgb8")
         # print('Receive rgbmap {}'.format(self.rgbmap_inflate.shape))
 
+    def handle_odom(self, msg):
+        vel_x = msg.twist.twist.linear.x
+        vel_y = msg.twist.twist.linear.y
+        vel_z = msg.twist.twist.linear.z
+
+        self.vel = float(np.linalg.norm([vel_x, vel_y, vel_z]))
+
     def publish_costmap(self):
         # import pdb;pdb.set_trace()
-        if (self.rgbmap_inflate is None) or (self.heightmap_inflate is None):
+        if (self.rgbmap_inflate is None) or (self.heightmap_inflate is None) or (self.vel is None):
+            print("Maps and vel not available yet. Check topic names.")
             return 
         maps = rosmsgs_to_maps(self.rgbmap_inflate, self.heightmap_inflate)
         before = time.time()
         # import pdb;pdb.set_trace()
-        costmap = produce_costmap(self.model, maps, self.map_metadata, self.crop_params, vel=5.0, fourier_freqs=self.fourier_freqs)
+        costmap = produce_costmap(self.model, maps, self.map_metadata, self.crop_params, vel=self.vel, fourier_freqs=self.fourier_freqs)
         print(f"Takes {time.time()-before} seconds to produce a costmap")
 
         costmap_grid = OccupancyGrid()
