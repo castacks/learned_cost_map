@@ -60,7 +60,7 @@ def get_val_metrics(model, val_loader, fourier_freqs=None):
 
 
 def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
-         grad_clip=None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, train_lc_dir=None, train_hc_dir=None, val_lc_dir=None, val_hc_dir=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None, fourier_scale=10.0):
+         grad_clip=None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, saved_model=None, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, train_lc_dir=None, train_hc_dir=None, val_lc_dir=None, val_hc_dir=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None, fourier_scale=10.0, fine_tune=False, saved_model_dir=None, saved_freqs_dir=None):
 
     if (data_root_dir is None):
         raise NotImplementedError()
@@ -86,14 +86,26 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
         model = CostVelModel(input_channels=8, embedding_size=512, output_size=1, pretrained=pretrained)
     elif model_name=="CostFourierVelModel":
         model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1, pretrained=pretrained)
-        fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
+        if fine_tune:
+            assert (saved_freqs_dir is not None), "saved_freqs_dir needs to be passed as input"
+            fourier_freqs = torch.load(saved_freqs_dir)
+        else:
+            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
     elif model_name=="CostModelEfficientNet":
         model = CostModelEfficientNet(input_channels=8, output_size=1, pretrained=pretrained)
     elif model_name=="CostFourierVelModelEfficientNet":
         model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=16, embedding_size=512, output_size=1, pretrained=pretrained)
-        fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
+        if fine_tune:
+            assert (saved_freqs_dir is not None), "saved_freqs_dir needs to be passed as input"
+            fourier_freqs = torch.load(saved_freqs_dir)
+        else:
+            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
     else:
         raise NotImplementedError()
+    
+    if fine_tune:
+        model.load_state_dict(torch.load(saved_model))
+        print("Pre-trained model successfully loaded!")
 
     if multiple_gpus and torch.cuda.device_count() > 1:
         print("Using up to ", torch.cuda.device_count(), "GPUs!")
@@ -194,7 +206,11 @@ if __name__ == '__main__':
     parser.add_argument('--augment_data', action='store_true', help="Augment data.")
     parser.add_argument('--high_cost_prob', type=float, help="Probability of high cost frames in data. If not set, defaults to None, and balanced data split.")
     parser.add_argument('--fourier_scale', type=float, default=10.0, help="Scale for Fourier frequencies, only needed for CostFourierVel models. If not set, defaults to 10.0.")
-    parser.set_defaults(balanced_loader=False, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False)
+    parser.add_argument('--fine_tune', action='store_true', help="Augment data.")
+    parser.add_argument('--saved_model_dir', type=str, help='String for where the saved model that will be used for fine tuning is located.')
+    parser.add_argument('--saved_freqs_dir', type=str, help='String for where the saved Fourier frequencies that will be used for fine tuning are located.')
+
+    parser.set_defaults(balanced_loader=False, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, fine_tune=False)
     args = parser.parse_args()
 
     print(f"grad_clip is {args.grad_clip}")
@@ -202,6 +218,7 @@ if __name__ == '__main__':
     print(f"pretrained is {args.pretrained}")
     print(f"weight decay is {args.weight_decay}")
     print(f"high_cost_prob is {args.high_cost_prob}")
+    print(f"fine_tune is {args.fine_tune}")
 
     # Run training loop
     main(model_name=args.model,
@@ -230,5 +247,8 @@ if __name__ == '__main__':
          pretrained=args.pretrained,
          augment_data=args.augment_data, 
          high_cost_prob=args.high_cost_prob,
-         fourier_scale=args.fourier_scale
+         fourier_scale=args.fourier_scale,
+         fine_tune=args.fine_tune,
+         saved_model_dir=args.saved_model_dir,
+         saved_freqs_dir=args.saved_freqs_dir
          )

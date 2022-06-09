@@ -208,6 +208,7 @@ include_directories(
 
 catkin_install_python(PROGRAMS
     scripts/learned_cost_map/ros/cost_publisher.py
+    scripts/learned_cost_map/ros/costmap_node.py
     # scripts/learned_cost_map/terrain_utils/*.py
     # scripts/learned_cost_map/data_loader/*.py
     # scripts/learned_cost_map/data_processing/*.py
@@ -220,6 +221,8 @@ catkin_install_python(PROGRAMS
 
 install(FILES
   launch/learned_cost_map.launch
+  launch/traversability_cost_publisher.launch
+  # scripts/learned_cost_map/ros/cost_statistics.yaml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
@@ -227,4 +230,3 @@ install(DIRECTORY
     models
     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
-
