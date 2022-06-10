@@ -29,7 +29,7 @@ wandb login b47938fa5bae1f5b435dfa32a2aa5552ceaad5c6
 ${EXE_PYTHON} $BASE_DIR/$PY_SCRIPT \
     --data_dir1 $DATA_DIR1 \
     --data_dir2 $DATA_DIR2 \
-    --output_dir $COSTSTATS_DIR
+    --output_dir $OUTPUT_DIR
 
 
 echo Cost statistics shell script ends.

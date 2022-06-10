@@ -5,6 +5,7 @@
 #SBATCH -N 1  # CPU Cores
 #SBATCH -t 1-00:00 # D-HH:MM
 #SBATCH -p gpu # cpu/gpu/dgx
+#SBATCH -w roberto 
 #SBATCH --gres=gpu:1
 #SBATCH --mem=8192  # MB
 #SBATCH --job-name=IMU_Cost_Labeler

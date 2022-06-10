@@ -159,6 +159,8 @@ def main(data_dir1, data_dir2, output_dir):
 
     for i, data_dir in enumerate(data_dirs):
         for dir in dir_names[i]:
+            if "preview" in dir:
+                continue
             print(f"Obtaining costs from directory: {os.path.join(data_dir, dir)}")
 
             ## Load IMU data
