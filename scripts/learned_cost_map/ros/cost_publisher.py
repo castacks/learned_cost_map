@@ -130,9 +130,9 @@ def cost_function(data, sensor_freq, cost_name, cost_stats, freq_range=None, num
 
         cost = np.mean(bps)
 
-        # # Normalize cost:
-        # cost = (cost-cost_stats["min"])/(cost_stats["max"]-cost_stats["min"])
-        # cost = max(min(cost, 1), 0)
+        # Normalize cost:
+        cost = (cost-cost_stats["min"])/(cost_stats["max"]-cost_stats["min"])
+        cost = max(min(cost, 1), 0)
 
     elif "band" in cost_name:
         assert freq_range is not None, "range should not be None"
@@ -140,9 +140,9 @@ def cost_function(data, sensor_freq, cost_name, cost_stats, freq_range=None, num
 
         cost = bp_z
 
-        # # Normalize cost:
-        # cost = (cost-cost_stats["min"])/(cost_stats["max"]-cost_stats["min"])
-        # cost = max(min(cost, 1), 0)
+        # Normalize cost:
+        cost = (cost-cost_stats["min"])/(cost_stats["max"]-cost_stats["min"])
+        cost = max(min(cost, 1), 0)
 
     else:
         raise NotImplementedError("cost_name needs to include bins or band")

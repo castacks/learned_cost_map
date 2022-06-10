@@ -182,6 +182,8 @@ if __name__ == "__main__":
     max_freq = 30
 
     for i, d in enumerate(traj_dirs):
+        if "preview" in d:
+            continue
         print("=====")
         print(f"Labeling directory {d}")
 
