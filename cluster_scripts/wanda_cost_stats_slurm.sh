@@ -6,6 +6,7 @@
 #SBATCH -t 1-00:00 # D-HH:MM
 #SBATCH -p gpu # cpu/gpu/dgx
 #SBATCH --gres=gpu:1
+#SBATCH -w roberto
 #SBATCH --mem=8192  # MB
 #SBATCH --job-name=IMU_Cost_Stats_Wanda
 #SBATCH -o /home/mguamanc/job_%j.out
