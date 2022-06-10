@@ -244,7 +244,7 @@ if __name__ == "__main__":
         if not os.path.exists(cost_dir):
             os.makedirs(cost_dir)
         
-        cost_val_fp = os.path.join(cost_dir, "cost.npy")
+        cost_val_fp = os.path.join(cost_dir, "float.npy")
         cost_times_fp = os.path.join(cost_dir, "timestamps.txt")
 
         np.save(cost_val_fp, np.array(cost_vals))
