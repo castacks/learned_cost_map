@@ -12,17 +12,14 @@ BASE_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/data_
 
 PY_SCRIPT=cost_labeler.py
 
-DATA_DIR=/project/learningphysics/tartandrive_trajs
+DATA_DIR=/project/learningphysics/tartancost_wanda_traj
 
-COSTSTATS_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/ros/cost_statistics.yaml
+COSTSTATS_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/ros/wanda_cost_statistics.yaml
 
 
 # Install learned_cost_map package
 cd $PACKAGE_DIR
 sudo pip3 install -e .
-
-# Login to Weights and Biases
-wandb login b47938fa5bae1f5b435dfa32a2aa5552ceaad5c6
 
 # Run labeling script
 ${EXE_PYTHON} $BASE_DIR/$PY_SCRIPT \
