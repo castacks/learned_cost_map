@@ -183,7 +183,7 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
         #     print(f"Evaluating batch {b}/{num_batches}")
         # import pdb;pdb.set_trace()
         patches = tm.get_crop_batch(poses=all_poses[batch_starts[b]:batch_ends[b]], crop_params=crop_params)
-        print(f"Shape of patches: {patches.shape}")
+        # print(f"Shape of patches: {patches.shape}")
         invalid_flags = process_invalid_patches(patches, thresh=0.5)
         # rgb_maps, height_maps = patches_to_imgs(patches)
         # front_img_ax.clear() 
@@ -207,7 +207,7 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
         input_data['vels'] = vels_vec
         input_data['fourier_vels'] = fourier_vels
         costs = model(input_data).detach()
-        # costs[invalid_flags] = 1.0 # TODO Uncomment this line if you want to set high costs to invalid areas
+        costs[invalid_flags] = 1.0 # TODO Uncomment this line if you want to set high costs to invalid areas
         all_costs.append(costs.squeeze())
         # plt.pause(0.1)
     all_costs = torch.cat(all_costs, 0)

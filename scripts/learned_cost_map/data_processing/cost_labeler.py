@@ -199,8 +199,8 @@ if __name__ == "__main__":
         image_times = np.loadtxt(image_txt)
 
         ## Initialize buffer
-        pad_val = -9.81
-        imu_freq = 100
+        pad_val = 9.81
+        imu_freq = 125.0
         num_seconds = 1
         buffer_size = int(num_seconds*imu_freq)  # num_seconds*imu_freq
         buffer = Buffer(buffer_size, padded=True, pad_val=pad_val)
@@ -221,7 +221,7 @@ if __name__ == "__main__":
             #     imu_segment = np.array([imu_segment])
 
             if len(imu_segment) > 0:
-                lin_acc_z = imu_segment[:, -3].tolist()
+                lin_acc_z = imu_segment[:, -1].tolist()
             else:
                 lin_acc_z = []
 

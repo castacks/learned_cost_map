@@ -5,7 +5,11 @@
 
     <!-- <node pkg="physics_atv_local_mapping" type="colorize_pcl_node.py" name="ColorizePclNode" output="screen" /> -->
 
-    <arg name="model_dir" default="$(find learned_cost_map)/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0"/>
+    <!-- <arg name="model_dir" default="$(find learned_cost_map)/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0"/> -->
+
+    <!-- Use model below for finetuned model  -->
+    <arg name="model_dir" default="$(find learned_cost_map)/scripts/learned_cost_map/trainer/models/finetune_wanda_CostFourierVelModel_lr_1e-5_g_99e-1_aug_l2_scale_10.0"/>
+
     <arg name="model_name" default="CostFourierVelModel"/>
 
     <node pkg="learned_cost_map" type="costmap_node.py" name="learned_costmap_node" output="screen">

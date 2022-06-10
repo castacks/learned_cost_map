@@ -21,7 +21,7 @@ class CostmapNode(object):
 
         rospy.Subscriber('/local_height_map_inflate', Image, self.handle_height_inflate, queue_size=1)
         rospy.Subscriber('/local_rgb_map_inflate', Image, self.handle_rgb_inflate, queue_size=1)
-        rospy.Subscriber('/odometry/filtered_odom', Odometry, self.handle_odom, queue_size=1)
+        rospy.Subscriber('/wanda/odom', Odometry, self.handle_odom, queue_size=1)
         self.heightmap_inflate = None
         self.rgbmap_inflate = None
         self.vel = None
@@ -125,7 +125,7 @@ class CostmapNode(object):
         costmap_grid.info.origin.orientation.z = 0.0
         costmap_grid.info.origin.orientation.w = 1.0
 
-        costmap_grid.data = (costmap*100).astype(np.int8).flatten().tolist()
+        costmap_grid.data = (costmap.T*100).astype(np.int8).flatten().tolist()
 
         self.costmap_pub.publish(costmap_grid)
 

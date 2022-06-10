@@ -65,9 +65,9 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
     if (data_root_dir is None):
         raise NotImplementedError()
     if wanda:
-        print("\n\=====\nROBOT IS WANDA\n=====")
+        print("\n=====\nROBOT IS WANDA\n=====\n")
     else:
-        print("\n\=====\nROBOT IS YAMAHA\n=====")
+        print("\n=====\nROBOT IS YAMAHA\n=====\n")
     ## Obtain DataLoaders
     print("Getting data loaders")
     time_data = time.time()
