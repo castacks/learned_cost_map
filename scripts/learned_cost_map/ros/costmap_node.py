@@ -1,8 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 import rospy
 import os
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
 
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
@@ -21,7 +22,7 @@ class CostmapNode(object):
 
         rospy.Subscriber('/local_height_map_inflate', Image, self.handle_height_inflate, queue_size=1)
         rospy.Subscriber('/local_rgb_map_inflate', Image, self.handle_rgb_inflate, queue_size=1)
-        rospy.Subscriber('/wanda/odom', Odometry, self.handle_odom, queue_size=1)
+        rospy.Subscriber('/integrated_to_init', Odometry, self.handle_odom, queue_size=1)
         self.heightmap_inflate = None
         self.rgbmap_inflate = None
         self.vel = None
@@ -50,9 +51,8 @@ class CostmapNode(object):
         # Define map metadata so that we know how many cells we need to query to produce costmap
         map_height = 12.0 # [m]
         map_width  = 12.0 # [m]
-        resolution = 0.02
+        resolution = 0.04
         origin     = [-2.0, -6.0]
-
         self.map_metadata = {
             'height': map_height,
             'width': map_width,
@@ -73,6 +73,7 @@ class CostmapNode(object):
         self.header = None 
 
         self.costmap_pub = rospy.Publisher('/learned_costmap', OccupancyGrid, queue_size=1, latch=False)
+        self.costmap_img_pub = rospy.Publisher('learned_costmap_img', Image, queue_size=1)
 
 
     def handle_height(self, msg):
@@ -112,6 +113,13 @@ class CostmapNode(object):
         costmap = produce_costmap(self.model, maps, self.map_metadata, self.crop_params, vel=self.vel, fourier_freqs=self.fourier_freqs)
         print(f"Takes {time.time()-before} seconds to produce a costmap")
 
+        costmap_img = Image()
+        costmap_img.header = self.header
+        costmap_img.height = int(costmap.shape[0])
+        costmap_img.width = int(costmap.shape[1])
+        costmap_img.encoding = "mono8"
+        costmap_img.data = (costmap*100).astype(np.uint8).flatten().tolist()
+
         costmap_grid = OccupancyGrid()
         costmap_grid.header = self.header
         costmap_grid.info.map_load_time = costmap_grid.header.stamp
@@ -128,6 +136,7 @@ class CostmapNode(object):
         costmap_grid.data = (costmap.T*100).astype(np.int8).flatten().tolist()
 
         self.costmap_pub.publish(costmap_grid)
+        self.costmap_img_pub.publish(costmap_img)
 
 
 if __name__ == '__main__':
