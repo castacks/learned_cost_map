@@ -159,7 +159,7 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
     # Get tensor of all map poses to be queried
     map_height = int(map_metadata['height']/map_metadata['resolution'])
     map_width = int(map_metadata['width']/map_metadata['resolution'])
-    stride = 10
+    stride = 20
     x_pixels = torch.arange(0, map_height, stride)
     y_pixels = torch.arange(0, map_width, stride)
     x_poses = x_pixels*map_metadata['resolution']+map_metadata["origin"][0]
@@ -169,7 +169,7 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
     all_poses = torch.cat([all_poses, torch.zeros(all_poses.shape[0], 1)], dim=-1).to(device).detach()
 
     num_cells = all_poses.shape[0]
-    batch_size = 256
+    batch_size = 4
     num_batches = ceil(num_cells/batch_size)
     batch_starts = [(k)*batch_size for k in range(num_batches)]
     batch_ends   = [min(((k+1)*batch_size), num_cells) for k in range(num_batches)]
@@ -207,7 +207,7 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
         input_data['vels'] = vels_vec
         input_data['fourier_vels'] = fourier_vels
         costs = model(input_data).detach()
-        costs[invalid_flags] = 1.0 # TODO Uncomment this line if you want to set high costs to invalid areas
+        costs[invalid_flags] = 0.5 # TODO Uncomment this line if you want to set high costs to invalid areas
         all_costs.append(costs.squeeze())
         # plt.pause(0.1)
     all_costs = torch.cat(all_costs, 0)
