@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo Training CostVelModel network with balanced data with a given split.
+echo Training CostFourierVelModel network with balanced data with a given split.
 
 # Define python version
 EXE_PYTHON=python3
@@ -17,9 +17,9 @@ TRAIN_LC_DIR=lowcost_5k
 TRAIN_HC_DIR=highcost_10k
 VAL_LC_DIR=lowcost_val_1k
 VAL_HC_DIR=highcost_val_2k
-MODEL=CostVelModel
+MODEL=CostFourierVelModel
 FOURIER_SCALE=10.0
-RUN_NAME=train_${MODEL}_lr_3e-4_g_99e-1_bal_aug_l2_scale_${FOURIER_SCALE}_0
+RUN_NAME=train_${MODEL}_lr_3e-4_g_99e-1_bal_aug_l2_scale_${FOURIER_SCALE}_3
 NUM_EPOCHS=50
 BATCH_SIZE=1024
 SEQ_LENGTH=1
