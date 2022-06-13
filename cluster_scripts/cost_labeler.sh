@@ -12,7 +12,7 @@ BASE_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/data_
 
 PY_SCRIPT=cost_labeler.py
 
-DATA_DIR=/project/learningphysics/tartancost_wanda_traj
+DATA_DIR=/project/learningphysics/tartancost_wanda_traj0609
 
 COSTSTATS_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/ros/wanda_cost_statistics.yaml
 
