@@ -5,7 +5,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostModelEfficientNet, CostFourierVelModelEfficientNet
+from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostModelEfficientNet, CostFourierVelModelEfficientNet, CostFourierVelModelSmall, CostFourierVelModelRGB
 
 from learned_cost_map.trainer.utils import get_dataloaders, get_balanced_dataloaders, preprocess_data, avg_dict, get_FFM_freqs, get_wanda_dataloaders, get_balanced_wanda_dataloaders
 
@@ -127,6 +127,20 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
             fourier_freqs = torch.load(saved_freqs)
         else:
             fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
+    elif model_name=="CostFourierVelModelSmall":
+        model = CostFourierVelModelSmall(input_channels=8, ff_size=16, embedding_size=512, output_size=1, pretrained=pretrained)
+        if fine_tune or just_eval:
+            assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
+            fourier_freqs = torch.load(saved_freqs)
+        else:
+            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
+    elif model_name=="CostFourierVelModelRGB":
+        model = CostFourierVelModelRGB(input_channels=3, ff_size=16, embedding_size=512, output_size=1, pretrained=pretrained)
+        if fine_tune or just_eval:
+            assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
+            fourier_freqs = torch.load(saved_freqs)
+        else:
+            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
     else:
         raise NotImplementedError()
     
@@ -214,7 +228,7 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256, seq_length = 1,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', choices=['CostModel', 'CostVelModel', 'CostFourierVelModel', 'CostModelEfficientNet', 'CostFourierVelModelEfficientNet'], default='CostModel')
+    parser.add_argument('--model', choices=['CostModel', 'CostVelModel', 'CostFourierVelModel', 'CostModelEfficientNet', 'CostFourierVelModelEfficientNet', 'CostFourierVelModelSmall', 'CostFourierVelModelRGB'], default='CostModel')
     parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
     parser.add_argument('--train_split', type=str, help='Path to the file that contains the training split text file.')
     parser.add_argument('--val_split', type=str, help='Path to the file that contains the validation split text file.')

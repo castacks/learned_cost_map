@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
         ## Initialize buffer
         pad_val = 9.81
-        imu_freq = 125.0
+        imu_freq = 100.0
         num_seconds = 1
         buffer_size = int(num_seconds*imu_freq)  # num_seconds*imu_freq
         buffer = Buffer(buffer_size, padded=True, pad_val=pad_val)
@@ -246,7 +246,7 @@ if __name__ == "__main__":
         if not os.path.exists(cost_dir):
             os.makedirs(cost_dir)
         
-        cost_val_fp = os.path.join(cost_dir, "float.npy")
+        cost_val_fp = os.path.join(cost_dir, "cost.npy")
         cost_times_fp = os.path.join(cost_dir, "timestamps.txt")
 
         np.save(cost_val_fp, np.array(cost_vals))
