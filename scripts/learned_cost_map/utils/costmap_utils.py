@@ -208,8 +208,14 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
         input_data['fourier_vels'] = fourier_vels
         costs = model(input_data).detach()
         costs[invalid_flags] = 0.5 # TODO Uncomment this line if you want to set high costs to invalid areas
-        all_costs.append(costs.squeeze())
+        # import pdb;pdb.set_trace()
+        if len(costs.shape) > 1:
+            costs = costs.squeeze()
+        if len(costs.shape) < 1:
+            costs = costs.view(-1)
+        all_costs.append(costs)
         # plt.pause(0.1)
+    
     all_costs = torch.cat(all_costs, 0)
     # Reshape cost predictions into costmap
     # import pdb;pdb.set_trace()

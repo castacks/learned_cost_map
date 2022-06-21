@@ -75,9 +75,13 @@ class CostFourierVelModel(nn.Module):
     def forward(self, input_data):
         x = input_data["patches"]
         vel = input_data["fourier_vels"]
-        import pdb;pdb.set_trace()
+        # import pdb;pdb.set_trace()
         processed_maps = self.model(x)
         processed_vel  = self.vel_mlp(vel)
+        if len(processed_maps.shape) < 2:
+            processed_maps = processed_maps.view(1, -1)
+        if len(processed_vel.shape) < 2:
+            processed_vel = processed_vel.view(1, -1)
         combined_features = torch.cat([processed_maps, processed_vel], dim=1)
         output = self.output_mlp(combined_features)
         output = self.sigmoid(output)
@@ -184,7 +188,7 @@ class CostFourierVelModelRGB(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, input_data):
-        import pdb;pdb.set_trace()
+        # import pdb;pdb.set_trace()
         x = input_data["patches"][:,0:3,:,:]
         vel = input_data["fourier_vels"]
         processed_maps = self.model(x)
