@@ -169,7 +169,7 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
     all_poses = torch.cat([all_poses, torch.zeros(all_poses.shape[0], 1)], dim=-1).to(device).detach()
 
     num_cells = all_poses.shape[0]
-    batch_size = 4
+    batch_size = 256
     num_batches = ceil(num_cells/batch_size)
     batch_starts = [(k)*batch_size for k in range(num_batches)]
     batch_ends   = [min(((k+1)*batch_size), num_cells) for k in range(num_batches)]
