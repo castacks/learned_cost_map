@@ -63,8 +63,8 @@ class CostmapGenerator(object):
             print("-----")
             print(f"Evaluating trajectory {d}")
             ## Load height_map and rgb_map data
-            rgbmap_dir = os.path.join(d, "rgb_map")
-            heightmap_dir = os.path.join(d, "height_map")
+            rgbmap_dir = os.path.join(d, "rgb_map_vo")
+            heightmap_dir = os.path.join(d, "height_map_vo")
 
             rgbmap_fps = list(filter(lambda fpath: ".npy" in fpath, [os.path.join(rgbmap_dir,x) for x in sorted(os.listdir(rgbmap_dir))]))
 
@@ -99,6 +99,9 @@ if __name__ == '__main__':
     parser.add_argument('--saved_freqs', type=str, help='String for where the saved Fourier frequencies that will be used for fine tuning are located.')
     parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
     parser.add_argument('--vel', type=float, default=5.0, help="Velocity at which to generate costmaps")
+    parser.add_argument('--use_real_vel', action='store_true', help="If set, uses the recorded velocity instead of input velocity")
+
+    parser.set_defaults(use_real_vel=False)
 
     args = parser.parse_args()
 
