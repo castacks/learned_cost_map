@@ -70,7 +70,7 @@ class CostmapGenerator(object):
 
             heightmap_fps = list(filter(lambda fpath: ".npy" in fpath, [os.path.join(heightmap_dir,x) for x in sorted(os.listdir(heightmap_dir))]))
 
-            learned_costmap_dir = os.path.join(d, "learned_cost_map")
+            learned_costmap_dir = os.path.join(d, f"learned_cost_map_vel_{self.vel}")
             if not os.path.exists(learned_costmap_dir):
                 os.makedirs(learned_costmap_dir)
             for j, (rgb_map_path, height_map_path) in enumerate(zip(rgbmap_fps, heightmap_fps)):
@@ -84,7 +84,11 @@ class CostmapGenerator(object):
                 costmap = produce_costmap(self.model, maps, self.map_metadata, self.crop_params, vel=self.vel, fourier_freqs=self.fourier_freqs)
                 
                 costmap_fp = os.path.join(learned_costmap_dir, f"{j:06}.npy")
+                costmap_prev_fp = os.path.join(learned_costmap_dir, f"{j:06}.png")
                 np.save(costmap_fp, costmap)
+
+                plt.imshow(costmap, origin="lower", vmin=0.0, vmax=1.0, cmap="plasma")
+                plt.savefig(costmap_fp, dpi=300, bbox_inches="tight")
 
 
 if __name__ == '__main__':
