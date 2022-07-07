@@ -22,7 +22,6 @@ VAL_LC_DIR=lowcost_val_1k
 VAL_HC_DIR=highcost_val_2k
 MODEL=CostFourierVelModel
 FOURIER_SCALE=10.0
-RUN_NAME=train_${MODEL}_lr_3e-4_g_99e-1_bal_aug_l2_scale_${FOURIER_SCALE}_3
 NUM_EPOCHS=50
 BATCH_SIZE=1024
 SEQ_LENGTH=1
@@ -32,7 +31,10 @@ GAMMA=0.99
 EVAL_INTERVAL=1
 SAVE_INTERVAL=1
 NUM_WORKERS=10
-
+EMBEDDING_SIZE=512
+MLP_SIZE=32
+# RUN_NAME=train_${MODEL}_lr_3e-4_g_99e-1_bal_aug_l2_scale_${FOURIER_SCALE}_3
+RUN_NAME=train_${MODEL}_MLP_${MLP_SIZE}_0
 
 
 # Install learned_cost_map package
@@ -66,6 +68,8 @@ ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --val_hc_dir $VAL_HC_DIR \
     --num_epochs $NUM_EPOCHS \
     --batch_size $BATCH_SIZE \
+    --embedding_size $EMBEDDING_SIZE \
+    --mlp_size $MLP_SIZE \
     -lr $LEARNING_RATE \
     --gamma $GAMMA \
     --weight_decay $WEIGHT_DECAY \

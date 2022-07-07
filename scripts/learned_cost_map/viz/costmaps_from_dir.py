@@ -88,7 +88,9 @@ class CostmapGenerator(object):
                 np.save(costmap_fp, costmap)
 
                 plt.imshow(costmap, origin="lower", vmin=0.0, vmax=1.0, cmap="plasma")
-                plt.savefig(costmap_fp, dpi=300, bbox_inches="tight")
+                plt.axis('off')
+                plt.savefig(costmap_prev_fp, dpi=300, bbox_inches="tight")
+                plt.close()
 
 
 if __name__ == '__main__':
