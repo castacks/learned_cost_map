@@ -160,6 +160,9 @@ if __name__ == "__main__":
     parser.add_argument('--coststats_dir', type=str, required=True, help='Path to cost_statistics.yaml file that contains statistics for IMU cost functions.')
     args = parser.parse_args()
 
+    print("Input arguments are the following: ")
+    print(f"data_dir: {args.data_dir}")
+    print(f"coststats_dir: {args.coststats_dir}")
     # Find all trajectory directories
     # trajectories_dir = os.path.join(args.data_dir, "Trajectories")
     # Below: set up for cluster:
