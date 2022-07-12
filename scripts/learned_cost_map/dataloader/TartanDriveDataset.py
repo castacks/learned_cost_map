@@ -164,9 +164,9 @@ class DatasetBase(Dataset):
             if datatype == 'disp0':
                 datapathlist.append(trajstr + '/depth_left/' + framestr + '.npy')
             if datatype == 'heightmap':
-                datapathlist.append(trajstr + '/height_map/' + framestr + '.npy')
+                datapathlist.append(trajstr + '/height_map_vo/' + framestr + '.npy')
             if datatype == 'rgbmap':
-                datapathlist.append(trajstr + '/rgb_map/' + framestr + '.npy')
+                datapathlist.append(trajstr + '/rgb_map_vo/' + framestr + '.npy')
 
         return datapathlist
 
@@ -324,8 +324,8 @@ class DatasetBase(Dataset):
         local_path = get_local_path(torch.from_numpy(odom)).to(device)
         
         ## GPS odom is 90 degrees rotated NED To FLU
-        local_path = torch.index_select(local_path, 1, torch.LongTensor([1, 0, 2]))
-        local_path[:,1] = -local_path[:,1]
+        # local_path = torch.index_select(local_path, 1, torch.LongTensor([1, 0, 2]))
+        # local_path[:,1] = -local_path[:,1]
 
         # patches = tm.get_crop_batch(local_path, crop_params)
         patches, masks = tm.get_crop_batch_and_masks(local_path, crop_params)

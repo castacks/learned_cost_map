@@ -60,7 +60,8 @@ RUN sudo pip3 install --no-cache-dir cupy-cuda113
 
 # Pillow version is fixed for torchvision.
 
-RUN sudo pip3 install --no-cache-dir torch==1.10.0 torchvision # tensorflow
+# RUN sudo pip3 install --no-cache-dir torch==1.10.0  torchvision # tensorflow
+RUN sudo pip3 install --no-cache-dir torch==1.10.0+cu113 torchvision==0.11.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html
 RUN sudo pip3 install --no-cache-dir pyyaml gym tabulate
 
 RUN sudo pip3 install --no-cache-dir catkin_pkg wandb

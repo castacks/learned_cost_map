@@ -20,9 +20,12 @@ def main(model_name, saved_model, saved_freqs, map_metadata=None, crop_params=No
     # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
     # train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
     # val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
-    data_root_dir = '/home/mateo/Data/SARA/TartanDriveCostTrain'
-    train_split = '/home/mateo/Data/SARA/TartanDriveCostTrain/tartandrive_train.txt'
-    val_split = '/home/mateo/Data/SARA/TartanDriveCostTrain/tartandrive_train.txt'
+    # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCostTrain'
+    # train_split = '/home/mateo/Data/SARA/TartanDriveCostTrain/tartandrive_train.txt'
+    # val_split = '/home/mateo/Data/SARA/TartanDriveCostTrain/tartandrive_train.txt'
+    data_root_dir = '/home/mateo/Data/SARA/20220628_traj'
+    train_split = '/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/splits/val_imu.txt'
+    val_split = '/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/splits/val_imu.txt'
     num_workers = 4
     shuffle_train = False
     shuffle_val = False
@@ -95,8 +98,8 @@ def main(model_name, saved_model, saved_freqs, map_metadata=None, crop_params=No
         local_path_tartanvo = get_local_path(odom_tartanvo)
 
         ## GPS odom is 90 degrees rotated NED To FLU
-        local_path = torch.index_select(local_path, 1, torch.LongTensor([1, 0, 2]))
-        local_path[:,1] = -local_path[:,1]
+        # local_path = torch.index_select(local_path, 1, torch.LongTensor([1, 0, 2]))
+        # local_path[:,1] = -local_path[:,1]
 
         path_pix_x, path_pix_y = local_path_to_pixels(local_path, map_metadata)
         gt_costmap = torch.zeros(rgb_map_array.shape[:-1])
