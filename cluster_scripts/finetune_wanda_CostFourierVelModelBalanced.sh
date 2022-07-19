@@ -33,6 +33,8 @@ SAVE_INTERVAL=1
 NUM_WORKERS=10
 SAVED_MODEL=/data/datasets/mguamanc/learned_cost_map/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0/epoch_50.pt
 SAVED_FREQS=/data/datasets/mguamanc/learned_cost_map/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0/fourier_freqs.pt
+MODELS_DIR=/data/datasets/mguamanc/learned_cost_map/models
+MAP_CONFIG=/data/datasets/mguamanc/learned_cost_map/configs/wanda_map_params.yaml
 
 
 
@@ -59,7 +61,9 @@ echo Running standard split
 ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --model $MODEL \
     --data_dir $DATA_DIR \
+    --models_dir $MODELS_DIR \
     --log_dir $RUN_NAME \
+    --map_config $MAP_CONFIG \
     --balanced_loader \
     --train_lc_dir $TRAIN_LC_DIR \
     --train_hc_dir $TRAIN_HC_DIR \

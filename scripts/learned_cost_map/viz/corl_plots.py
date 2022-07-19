@@ -11,20 +11,20 @@ sns.set_style("whitegrid")
 # Define CSV filepaths:
 train_dict = {
     "corl": "/home/mateo/phoenix_ws/src/learned_cost_map/data/corl_train.csv",
-    "patch": "/home/mateo/phoenix_ws/src/learned_cost_map/data/patch_train.csv",
+    # "patch": "/home/mateo/phoenix_ws/src/learned_cost_map/data/patch_train.csv",
     "patch_vel": "/home/mateo/phoenix_ws/src/learned_cost_map/data/patch_vel_train.csv",
     "mlp32": "/home/mateo/phoenix_ws/src/learned_cost_map/data/mlp32_train.csv",
-    "small": "/home/mateo/phoenix_ws/src/learned_cost_map/data/resnet10_mlp512_train.csv",
-    "rgb": "/home/mateo/phoenix_ws/src/learned_cost_map/data/only_rgb_train.csv"
+    # "small": "/home/mateo/phoenix_ws/src/learned_cost_map/data/resnet10_mlp512_train.csv",
+    # "rgb": "/home/mateo/phoenix_ws/src/learned_cost_map/data/only_rgb_train.csv"
 }
 
 val_dict = {
     "corl": "/home/mateo/phoenix_ws/src/learned_cost_map/data/corl_val.csv",
-    "patch": "/home/mateo/phoenix_ws/src/learned_cost_map/data/patch_val.csv",
+    # "patch": "/home/mateo/phoenix_ws/src/learned_cost_map/data/patch_val.csv",
     "patch_vel": "/home/mateo/phoenix_ws/src/learned_cost_map/data/patch_vel_val.csv",
     "mlp32": "/home/mateo/phoenix_ws/src/learned_cost_map/data/mlp32_val.csv",
-    "small": "/home/mateo/phoenix_ws/src/learned_cost_map/data/resnet10_mlp512_val.csv",
-    "rgb": "/home/mateo/phoenix_ws/src/learned_cost_map/data/only_rgb_val.csv"
+    # "small": "/home/mateo/phoenix_ws/src/learned_cost_map/data/resnet10_mlp512_val.csv",
+    # "rgb": "/home/mateo/phoenix_ws/src/learned_cost_map/data/only_rgb_val.csv"
 }
 
 # train_dfs = [pd.read_csv(train_dict[k]) for k in train_dict.keys()]

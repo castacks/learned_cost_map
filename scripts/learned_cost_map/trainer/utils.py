@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import yaml
 import os
 from torch.utils.data import DataLoader
 from torchvision import transforms as T
@@ -90,18 +91,24 @@ def FourierFeatureMapping(data, B):
 
     return fourier_data
 
-def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=False, use_multi_epochs_loader=True):
+def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, map_config, augment_data=False, use_multi_epochs_loader=True):
     
 
     print("Inside utils/get_dataloaders")
     before_time = time.time()
 
+    with open(map_config, "r") as file:
+        map_info = yaml.safe_load(file)
+    map_metadata = map_info["map_metadata"]
+    crop_params = map_info["crop_params"]
 
     datatypes = "imgc,heightmap,rgbmap,odom,cost,patches"
     base_mod_lengths = [1,1,1,10,10,1]
     modality_lengths = [seq_length*l for l in base_mod_lengths]
 
     train_set = DatasetBase(train_split,
+                            map_metadata,
+                            crop_params,
                             dataroot= data_root_dir,
                             datatypes = datatypes,
                             modalitylens = modality_lengths,
@@ -111,6 +118,8 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
                             frame_stride=5,
                             augment_data=augment_data)
     val_set = DatasetBase(val_split,
+                        map_metadata,
+                        crop_params,
                         dataroot= data_root_dir,
                         datatypes = datatypes,
                         modalitylens = modality_lengths,
@@ -134,7 +143,7 @@ def get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_spli
 
     return train_loader, val_loader
 
-def get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, augment_data=True, high_cost_prob=None, use_multi_epochs_loader=True):
+def get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, map_config, augment_data=True, high_cost_prob=None, use_multi_epochs_loader=True):
     
     data_train_lc_dir = os.path.join(data_root_dir, train_lc_dir)
     data_train_hc_dir = os.path.join(data_root_dir, train_hc_dir)
@@ -142,9 +151,14 @@ def get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_d
     data_val_lc_dir = os.path.join(data_root_dir, val_lc_dir)
     data_val_hc_dir = os.path.join(data_root_dir, val_hc_dir)
 
-    train_set = BalancedTartanDrive(data_train_lc_dir, data_train_hc_dir, balanced_data_transform, augment_data=augment_data, high_cost_prob=high_cost_prob)
+    with open(map_config, "r") as file:
+        map_info = yaml.safe_load(file)
+    map_metadata = map_info["map_metadata"]
+    crop_params = map_info["crop_params"]
 
-    val_set = BalancedTartanDrive(data_val_lc_dir, data_val_hc_dir, balanced_data_transform, augment_data=False, high_cost_prob=high_cost_prob)
+    train_set = BalancedTartanDrive(data_train_lc_dir, data_train_hc_dir, map_metadata, crop_params, balanced_data_transform, augment_data=augment_data, high_cost_prob=high_cost_prob)
+
+    val_set = BalancedTartanDrive(data_val_lc_dir, data_val_hc_dir, map_metadata, crop_params, balanced_data_transform, augment_data=False, high_cost_prob=high_cost_prob)
 
     if use_multi_epochs_loader:
         loader_class = MultiEpochsDataLoader
@@ -204,7 +218,7 @@ def get_wanda_dataloaders(batch_size, seq_length, data_root_dir, train_split, va
 
     return train_loader, val_loader
 
-def get_balanced_wanda_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, augment_data=True, high_cost_prob=None, use_multi_epochs_loader=True):
+def get_balanced_wanda_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, map_config, augment_data=True, high_cost_prob=None, use_multi_epochs_loader=True):
     
     data_train_lc_dir = os.path.join(data_root_dir, train_lc_dir)
     data_train_hc_dir = os.path.join(data_root_dir, train_hc_dir)
@@ -212,9 +226,14 @@ def get_balanced_wanda_dataloaders(batch_size, data_root_dir, train_lc_dir, trai
     data_val_lc_dir = os.path.join(data_root_dir, val_lc_dir)
     data_val_hc_dir = os.path.join(data_root_dir, val_hc_dir)
 
-    train_set = BalancedWandaDataset(data_train_lc_dir, data_train_hc_dir, balanced_data_transform, augment_data=augment_data, high_cost_prob=high_cost_prob)
+    with open(map_config, "r") as file:
+        map_info = yaml.safe_load(file)
+    map_metadata = map_info["map_metadata"]
+    crop_params = map_info["crop_params"]
 
-    val_set = BalancedWandaDataset(data_val_lc_dir, data_val_hc_dir, balanced_data_transform, augment_data=False, high_cost_prob=high_cost_prob)
+    train_set = BalancedWandaDataset(data_train_lc_dir, data_train_hc_dir, map_metadata, crop_params, balanced_data_transform, augment_data=augment_data, high_cost_prob=high_cost_prob)
+
+    val_set = BalancedWandaDataset(data_val_lc_dir, data_val_hc_dir, map_metadata, crop_params, balanced_data_transform, augment_data=False, high_cost_prob=high_cost_prob)
 
     if use_multi_epochs_loader:
         loader_class = MultiEpochsDataLoader
@@ -357,5 +376,3 @@ def patches_to_imgs(patches_tensor):
     height_maps = np.stack(height_maps, axis=0)
 
     return rgb_maps, height_maps
-
-

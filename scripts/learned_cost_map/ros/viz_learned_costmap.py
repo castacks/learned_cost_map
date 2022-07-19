@@ -4,6 +4,7 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import yaml
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from sensor_msgs.msg import Image, CameraInfo
@@ -14,7 +15,7 @@ from nav_msgs.msg import OccupancyGrid, MapMetaData, Odometry
 import time
 
 class CostmapVizNode(object):
-    def __init__(self):
+    def __init__(self, map_config):
         self.cvbridge = CvBridge()
 
         rospy.Subscriber('/learned_costmap', OccupancyGrid, self.handle_learned_costmap, queue_size=1)
@@ -28,25 +29,10 @@ class CostmapVizNode(object):
 
 
         # Define map metadata so that we know how many cells we need to query to produce costmap
-        map_height = 12.0 # [m]
-        map_width  = 12.0 # [m]
-        resolution = 0.04
-        origin     = [-2.0, -6.0]
-        self.map_metadata = {
-            'height': map_height,
-            'width': map_width,
-            'resolution': resolution,
-            'origin': origin
-        }
-
-        crop_width = 2.0  # in meters
-        crop_size = [crop_width, crop_width]
-        output_size = [64, 64]
-
-        self.crop_params ={
-            'crop_size': crop_size,
-            'output_size': output_size
-        }
+        with open(map_config, "r") as file:
+            map_info = yaml.safe_load(file)
+        self.map_metadata = map_info["map_metadata"]
+        self.crop_params = map_info["crop_params"]
 
         # We will take the header of the rgbmap to populate the header of the output occupancy grid
         self.header = None 
@@ -120,10 +106,11 @@ class CostmapVizNode(object):
 if __name__ == '__main__':
 
     rospy.init_node("learned_costmap_visualizer", log_level=rospy.INFO)
-
     rospy.loginfo("learned_costmap_visualizer initialized")
 
-    node = CostmapVizNode()
+    map_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/map_params.yaml"
+
+    node = CostmapVizNode(map_config)
     r = rospy.Rate(10)
 
     count = 0

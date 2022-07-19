@@ -35,6 +35,8 @@ EMBEDDING_SIZE=512
 MLP_SIZE=32
 # RUN_NAME=train_${MODEL}_lr_3e-4_g_99e-1_bal_aug_l2_scale_${FOURIER_SCALE}_3
 RUN_NAME=train_${MODEL}_MLP_${MLP_SIZE}_0
+MODELS_DIR=/data/datasets/mguamanc/learned_cost_map/models
+MAP_CONFIG=/data/datasets/mguamanc/learned_cost_map/configs/map_params.yaml
 
 
 # Install learned_cost_map package
@@ -60,7 +62,9 @@ echo Running standard split
 ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --model $MODEL \
     --data_dir $DATA_DIR \
+    --models_dir $MODELS_DIR \
     --log_dir $RUN_NAME \
+    --map_config $MAP_CONFIG \
     --balanced_loader \
     --train_lc_dir $TRAIN_LC_DIR \
     --train_hc_dir $TRAIN_HC_DIR \

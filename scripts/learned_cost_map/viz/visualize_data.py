@@ -15,10 +15,11 @@ def main():
     data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
     train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
     val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+    map_config = '/home/mateo/phoenix_ws/src/learned_cost_map/configs/map_params.yaml'
     num_workers = 4
     shuffle_train = False
     shuffle_val = False
-    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=False)
+    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, map_config, augment_data=False)
 
     fig = plt.figure()
     spec = gridspec.GridSpec(ncols=10, nrows=4, figure=fig)

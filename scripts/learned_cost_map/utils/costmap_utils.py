@@ -116,7 +116,7 @@ def process_invalid_patches(patches, thresh=0.5):
 
     return invalid_flags
 
-def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_freqs=None):
+def produce_costmap(model, maps, map_metadata, crop_params, costmap_batch_size=256, costmap_stride=20, vel=None, fourier_freqs=None):
     '''Returns a costmap using a trained model from a maps dict.
 
     Args:
@@ -151,6 +151,8 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
         - costmap:
             Tensor of dimensions as given by the map_metadata: (height/resolution, width/resolution) containing inferred costmap from learned model.
     '''
+
+    print(f"costmap_batch_size: {costmap_batch_size}, costmap_stride: {costmap_stride}")
     # import pdb;pdb.set_trace()
     device = "cuda" # "cuda" if torch.cuda.is_available() else "cpu"
     tm = TerrainMap(maps=maps, map_metadata=map_metadata, device=device)
@@ -159,9 +161,8 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
     # Get tensor of all map poses to be queried
     map_height = int(map_metadata['height']/map_metadata['resolution'])
     map_width = int(map_metadata['width']/map_metadata['resolution'])
-    stride = 20
-    x_pixels = torch.arange(0, map_height, stride)
-    y_pixels = torch.arange(0, map_width, stride)
+    x_pixels = torch.arange(0, map_height, costmap_stride)
+    y_pixels = torch.arange(0, map_width, costmap_stride)
     x_poses = x_pixels*map_metadata['resolution']+map_metadata["origin"][0]
     y_poses = y_pixels*map_metadata['resolution']+map_metadata["origin"][1]
     all_poses = torch.stack(torch.meshgrid(x_poses, y_poses, indexing="ij"), dim=-1).view(-1, 2)
@@ -169,10 +170,9 @@ def produce_costmap(model, maps, map_metadata, crop_params, vel=None, fourier_fr
     all_poses = torch.cat([all_poses, torch.zeros(all_poses.shape[0], 1)], dim=-1).to(device).detach()
 
     num_cells = all_poses.shape[0]
-    batch_size = 1024 #512 #256
-    num_batches = ceil(num_cells/batch_size)
-    batch_starts = [(k)*batch_size for k in range(num_batches)]
-    batch_ends   = [min(((k+1)*batch_size), num_cells) for k in range(num_batches)]
+    num_batches = ceil(num_cells/costmap_batch_size)
+    batch_starts = [(k)*costmap_batch_size for k in range(num_batches)]
+    batch_ends   = [min(((k+1)*costmap_batch_size), num_cells) for k in range(num_batches)]
 
     all_costs = []
     # Query all map poses from TerrainMap

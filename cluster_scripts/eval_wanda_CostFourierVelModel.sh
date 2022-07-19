@@ -31,6 +31,8 @@ SAVE_INTERVAL=1
 NUM_WORKERS=10
 SAVED_MODEL=/data/datasets/mguamanc/learned_cost_map/models/${MODEL_DIR}/epoch_50.pt
 SAVED_FREQS=/data/datasets/mguamanc/learned_cost_map/models/${MODEL_DIR}/fourier_freqs.pt
+MODELS_DIR=/data/datasets/mguamanc/learned_cost_map/models
+MAP_CONFIG=/data/datasets/mguamanc/learned_cost_map/configs/wanda_map_params.yaml
 
 
 # Install learned_cost_map package
@@ -50,7 +52,9 @@ ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --data_dir $DATA_DIR \
     --train_split $TRAIN_SPLIT \
     --val_split $VAL_SPLIT \
+    --models_dir $MODELS_DIR \
     --log_dir $RUN_NAME \
+    --map_config $MAP_CONFIG \
     --num_epochs $NUM_EPOCHS \
     --batch_size $BATCH_SIZE \
     --seq_length $SEQ_LENGTH \

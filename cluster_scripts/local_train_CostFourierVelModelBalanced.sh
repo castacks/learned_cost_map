@@ -35,6 +35,8 @@ GAMMA=0.99
 EVAL_INTERVAL=1
 SAVE_INTERVAL=1
 NUM_WORKERS=10
+MODELS_DIR=/data/datasets/mguamanc/learned_cost_map/models
+MAP_CONFIG=/data/datasets/mguamanc/learned_cost_map/configs/map_params.yaml
 
 
 # Login to Weights and Biases
@@ -47,7 +49,9 @@ echo Running standard split
 ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --model $MODEL \
     --data_dir $DATA_DIR \
+    --models_dir $MODELS_DIR \
     --log_dir $RUN_NAME \
+    --map_config $MAP_CONFIG \
     --balanced_loader \
     --train_lc_dir $TRAIN_LC_DIR \
     --train_hc_dir $TRAIN_HC_DIR \

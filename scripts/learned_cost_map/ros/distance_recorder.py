@@ -4,6 +4,7 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import yaml
 
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
@@ -13,7 +14,7 @@ from nav_msgs.msg import Odometry, OccupancyGrid, MapMetaData
 import time
 
 class PathLengthRecorder(object):
-    def __init__(self):
+    def __init__(self, map_config):
         self.cvbridge = CvBridge()
 
         rospy.Subscriber('/learned_costmap', OccupancyGrid, self.handle_learned_costmap, queue_size=1)
@@ -30,25 +31,10 @@ class PathLengthRecorder(object):
         self.total_costmap_energy = 0.0
 
         # Define map metadata so that we know how many cells we need to query to produce costmap
-        map_height = 12.0 # [m]
-        map_width  = 12.0 # [m]
-        resolution = 0.04
-        origin     = [-2.0, -6.0]
-        self.map_metadata = {
-            'height': map_height,
-            'width': map_width,
-            'resolution': resolution,
-            'origin': origin
-        }
-
-        crop_width = 2.0  # in meters
-        crop_size = [crop_width, crop_width]
-        output_size = [64, 64]
-
-        self.crop_params ={
-            'crop_size': crop_size,
-            'output_size': output_size
-        }
+        with open(map_config, "r") as file:
+            map_info = yaml.safe_load(file)
+        self.map_metadata = map_info["map_metadata"]
+        self.crop_params = map_info["crop_params"]
 
         self.resolution = None
         self.origin_x = None
@@ -118,7 +104,9 @@ if __name__ == '__main__':
 
     rospy.loginfo("learned_costmap_visualizer initialized")
 
-    node = PathLengthRecorder()
+    map_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/map_params.yaml"
+
+    node = PathLengthRecorder(map_config)
     r = rospy.Rate(10)
 
     count = 0

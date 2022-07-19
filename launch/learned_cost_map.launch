@@ -5,16 +5,26 @@
 
     <!-- <node pkg="physics_atv_local_mapping" type="colorize_pcl_node.py" name="ColorizePclNode" output="screen" /> -->
 
-    <arg name="model_dir" default="$(find learned_cost_map)/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0"/> 
+    <arg name="model_dir" default="$(find learned_cost_map)/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0"/> 
 
     <!-- Use model below for finetuned model  -->
-    <!-- <arg name="model_dir" default="$(find learned_cost_map)/scripts/learned_cost_map/trainer/models/finetune_wanda_CostFourierVelModel_lr_1e-5_g_99e-1_aug_l2_scale_10.0"/> -->
+    <!-- <arg name="model_dir" default="$(find learned_cost_map)/models/finetune_wanda_CostFourierVelModel_lr_1e-5_g_99e-1_aug_l2_scale_10.0"/> -->
 
     <arg name="model_name" default="CostFourierVelModel"/>
+    <arg name="map_config" default="$(find learned_cost_map)/configs/map_params.yaml"/> 
+    <arg name="costmap_config" default="$(find learned_cost_map)/configs/output_costmap_params.yaml"/> 
+    <arg name="height_map_topic" default="/local_height_map_inflate">
+    <arg name="rgb_map_topic" default="/local_rgb_map_inflate">
+    <arg name="odometry_topic" default="/integrated_to_init">
 
     <node pkg="learned_cost_map" type="costmap_node.py" name="learned_costmap_node" output="screen">
         <param name="model_name" value="$(arg model_name)"/>
         <param name="model_dir" value="$(arg model_dir)"/>
+        <param name="map_config" value="$(arg map_config)"/>
+        <param name="costmap_config" value="$(arg costmap_config)"/>
+        <param name="height_map_topic" value="$(arg height_map_topic)">
+        <param name="rgb_map_topic" value="$(arg rgb_map_topic)">
+        <param name="odometry_topic" value="$(arg odometry_topic)">
     </node>    
 
     <include file="$(find learned_cost_map)/launch/traversability_cost_publisher.launch"/>

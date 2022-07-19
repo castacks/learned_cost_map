@@ -4,16 +4,17 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostFourierVelModelEfficientNet
+from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostFourierVelModelEfficientNet, CostFourierVelModelRGB, CostFourierVelModelSmall, CostModelEfficientNet
 from learned_cost_map.utils.costmap_utils import produce_costmap
 
 from learned_cost_map.trainer.utils import get_dataloaders, get_balanced_dataloaders, preprocess_data, avg_dict, get_FFM_freqs, tensor_to_img
 from math import ceil
 import matplotlib.pyplot as plt
 import time
+import yaml
 
 
-def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=None, saved_freqs=None, vel=None):
+def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=None, saved_freqs=None, vel=None, map_config=None, costmap_config=None, mlp_size=512):
     # Set up dataloaders to visualize costmaps
     # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
     # train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
@@ -24,19 +25,29 @@ def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=
     num_workers = 1
     shuffle_train = False
     shuffle_val = False
-    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=False)
+    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, map_config, augment_data=False)
 
-    # import pdb;pdb.set_trace()
+    pretrained=False
+    embedding_size=512
+
     fourier_freqs = None
     if model_name=="CostModel":
         model = CostModel(input_channels=8, output_size=1)
     elif model_name=="CostVelModel":
-        model = CostVelModel(input_channels=8, embedding_size=512, output_size=1)
+        model = CostVelModel(input_channels=8, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1)
     elif model_name=="CostFourierVelModel":
-        model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+        model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
         fourier_freqs = torch.load(saved_freqs)
+    elif model_name=="CostModelEfficientNet":
+        model = CostModelEfficientNet(input_channels=8, output_size=1)
     elif model_name=="CostFourierVelModelEfficientNet":
-        model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+        model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1)
+        fourier_freqs = torch.load(saved_freqs)
+    elif model_name=="CostFourierVelModelSmall":
+        model = CostFourierVelModelSmall(input_channels=8, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1)
+        fourier_freqs = torch.load(saved_freqs)
+    elif model_name=="CostFourierVelModelRGB":
+        model = CostFourierVelModelRGB(input_channels=3, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1)
         fourier_freqs = torch.load(saved_freqs)
     else:
         raise NotImplementedError()
@@ -47,27 +58,16 @@ def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=
     model.cuda()
     model.eval()
 
-    # Define map metadata so that we know how many cells we need to query to produce costmap
-    map_height = 12.0 # [m]
-    map_width  = 12.0 # [m]
-    resolution = 0.02
-    origin     = [-2.0, -6.0]
+    with open(map_config, "r") as file:
+        map_info = yaml.safe_load(file)
+    map_metadata = map_info["map_metadata"]
+    crop_params = map_info["crop_params"]
 
-    map_metadata = {
-        'height': map_height,
-        'width': map_width,
-        'resolution': resolution,
-        'origin': origin
-    }
+    with open(costmap_config, "r") as file:
+        costmap_params = yaml.safe_load(file)
+    costmap_batch_size = costmap_params["batch_size"]
+    costmap_stride = costmap_params["stride"]
 
-    crop_width = 2.0  # in meters
-    crop_size = [crop_width, crop_width]
-    output_size = [64, 64]
-
-    crop_params ={
-        'crop_size': crop_size,
-        'output_size': output_size
-    }
 
     fig = plt.figure()
     fig.suptitle(f"Learned Costmap. Model: {model_name}. Vel: {vel:.2f}")
@@ -88,7 +88,7 @@ def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=
 
         print("Producing costmap")
         before = time.time()
-        costmap = produce_costmap(model, maps, map_metadata, crop_params, vel, fourier_freqs)
+        costmap = produce_costmap(model, maps, map_metadata, crop_params, costmap_batch_size, costmap_stride, vel, fourier_freqs)
         print(f"Time to produce costmap: {time.time() - before} s.")
         front_img_ax.clear()
         rgb_map_ax.clear()
@@ -101,37 +101,49 @@ def main(batch_size = 256, seq_length = 10, model_name="CostModel", saved_model=
         costmap_im = costmap_ax.imshow(np.swapaxes(costmap, 0, 1), vmin=0.0, vmax=1.0, cmap="viridis", origin="lower")
         cb = plt.colorbar(costmap_im, shrink=0.4)
         costmap_ax.set_title("Learned Costmap")
-        if i==0:
-            plt.pause(5)
+        # if i==0:
+        #     plt.pause(5)
         plt.pause(0.1)
         cb.remove()
 
 if __name__ == '__main__':
     # Run training loop
-    # saved_model = "models/epoch_20.pt"
-    # saved_model = "/home/mateo/models/train500/epoch_35.pt"
 
-    # saved_model = "/home/mateo/models/train_CostModel2/epoch_50.pt"
-    # vel = 1.0
-    # main(batch_size = 1, seq_length = 1, model_name="CostModel", saved_model=saved_model)
+    # saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModel_uni_aug_l2/epoch_50.pt"
+    # saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModel_uni_aug_l2/fourier_freqs.pt"
 
-    # saved_model = "/home/mateo/models/train_CostVelModel/epoch_50.pt"
-    # vel = 1.0
-    # main(batch_size = 1, seq_length = 1, model_name="CostVelModel", saved_model=saved_model, vel=vel)
+    # saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModel_bal_aug_l2/epoch_50.pt"
+    # saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModel_bal_aug_l2/fourier_freqs.pt"
 
-    # saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_uni_aug_l2/epoch_50.pt"
-    # saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_uni_aug_l2/fourier_freqs.pt"
-
-    # saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_bal_aug_l2/epoch_50.pt"
-    # saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_bal_aug_l2/fourier_freqs.pt"
-
-    # saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModelEfficientNet_uni_aug_l2/epoch_50.pt"
-    # saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModelEfficientNet_uni_aug_l2/fourier_freqs.pt"
-
-    saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0/epoch_50.pt"
-    saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0/fourier_freqs.pt"
+    # saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModelEfficientNet_uni_aug_l2/epoch_50.pt"
+    # saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModelEfficientNet_uni_aug_l2/fourier_freqs.pt"
 
 
-    model_name = "CostFourierVelModel"
+    ## MLP 32
+    # saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModel_MLP_32_2/epoch_50.pt"
+    # saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModel_MLP_32_2/fourier_freqs.pt"
+    # map_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/map_params.yaml"
+    # costmap_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/output_costmap_params.yaml"
+
+    ## MLP 128
+    # saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModel_MLP_128_1/epoch_50.pt"
+    # saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModel_MLP_128_1/fourier_freqs.pt"
+    # map_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/map_params.yaml"
+    # costmap_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/output_costmap_params.yaml"
+
+    ## MLP 512
+    # saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0/epoch_50.pt"
+    # saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0/fourier_freqs.pt"
+    # map_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/map_params.yaml"
+    # costmap_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/output_costmap_params.yaml"
+
+    ## Smaller ResNet
+    saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModelSmall_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0_0/epoch_50.pt"
+    saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModelSmall_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0_0/fourier_freqs.pt"
+    map_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/map_params.yaml"
+    costmap_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/output_costmap_params.yaml"
+
+    model_name = "CostFourierVelModelSmall"
     vel = 5.0
-    main(batch_size = 1, seq_length = 1, model_name=model_name, saved_model=saved_model, saved_freqs=saved_freqs, vel=vel)
+    mlp_size=512
+    main(batch_size = 1, seq_length = 1, model_name=model_name, saved_model=saved_model, saved_freqs=saved_freqs, vel=vel, map_config=map_config, costmap_config=costmap_config, mlp_size=mlp_size)

@@ -3,6 +3,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+import yaml
 
 import time
 
@@ -10,7 +11,7 @@ from learned_cost_map.utils.costmap_utils import produce_costmap, rosmsgs_to_map
 from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostFourierVelModelEfficientNet
 
 class CostmapGenerator(object):
-    def __init__(self, model_name, saved_model, saved_freqs, data_dir, vel):
+    def __init__(self, model_name, saved_model, saved_freqs, data_dir, vel, map_config, costmap_config):
         self.data_dir = data_dir
         self.vel = vel
 
@@ -35,26 +36,15 @@ class CostmapGenerator(object):
 
 
         # Define map metadata so that we know how many cells we need to query to produce costmap
-        map_height = 12.0 # [m]
-        map_width  = 12.0 # [m]
-        resolution = 0.02
-        origin     = [-2.0, -6.0]
-        self.map_metadata = {
-            'height': map_height,
-            'width': map_width,
-            'resolution': resolution,
-            'origin': origin
-        }
+        with open(map_config, "r") as file:
+            map_info = yaml.safe_load(file)
+        self.map_metadata = map_info["map_metadata"]
+        self.crop_params = map_info["crop_params"]
 
-        crop_width = 2.0  # in meters
-        crop_size = [crop_width, crop_width]
-        output_size = [64, 64]
-
-        self.crop_params ={
-            'crop_size': crop_size,
-            'output_size': output_size
-        }
-
+        with open(costmap_config, "r") as file:
+            costmap_params = yaml.safe_load(file)
+        self.costmap_batch_size = costmap_params["batch_size"]
+        self.costmap_stride = costmap_params["stride"]
 
     def generate_costmaps(self):
         traj_dirs = list(filter(os.path.isdir, [os.path.join(self.data_dir,x) for x in sorted(os.listdir(self.data_dir))]))
@@ -81,7 +71,7 @@ class CostmapGenerator(object):
                 rgb_map = np.load(rgb_map_path)
                 height_map = np.load(height_map_path)
                 maps = rosmsgs_to_maps(rgb_map, height_map)
-                costmap = produce_costmap(self.model, maps, self.map_metadata, self.crop_params, vel=self.vel, fourier_freqs=self.fourier_freqs)
+                costmap = produce_costmap(self.model, maps, self.map_metadata, self.crop_params, costmap_batch_size=self.costmap_batch_size, costmap_stride=self.costmap_stride, vel=self.vel, fourier_freqs=self.fourier_freqs)
                 
                 costmap_fp = os.path.join(learned_costmap_dir, f"{j:06}.npy")
                 costmap_prev_fp = os.path.join(learned_costmap_dir, f"{j:06}.png")
@@ -102,6 +92,8 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
     parser.add_argument('--vel', type=float, default=5.0, help="Velocity at which to generate costmaps")
     parser.add_argument('--use_real_vel', action='store_true', help="If set, uses the recorded velocity instead of input velocity")
+    parser.add_argument('--map_config', type=str, required=True, help='Path to the YAML config file that specifies map parameters')
+    parser.add_argument('--costmap_config', type=str, required=True, help='Path to the YAML config file that specifies costmap parameters')
 
     parser.set_defaults(use_real_vel=False)
 
@@ -112,8 +104,10 @@ if __name__ == '__main__':
     saved_freqs = args.saved_freqs
     data_dir = args.data_dir
     vel = args.vel
+    map_config = args.map_config
+    costmap_config = args.costmap_config
 
     if (saved_model is None) or (model_name is None) or (saved_freqs is None):
         raise NotImplementedError()
-    cg = CostmapGenerator(model_name, saved_model, saved_freqs, data_dir, vel)
+    cg = CostmapGenerator(model_name, saved_model, saved_freqs, data_dir, vel, map_config, costmap_config)
     cg.generate_costmaps()

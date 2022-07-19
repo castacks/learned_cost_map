@@ -19,6 +19,7 @@ TRAIN_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/sp
 VAL_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/val_uniform.txt
 NUM_BINS=20
 OUTPUT_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits
+MAP_CONFIG=/data/datasets/mguamanc/learned_cost_map/configs/map_params.yaml
 
 
 
@@ -30,6 +31,7 @@ sudo pip3 install -e .
 # Run split script
 ${EXE_PYTHON} $BASE_DIR/$PY_SCRIPT \
     --data_dir $DATA_DIR \
+    --map_config $MAP_CONFIG \
     --train_split $TRAIN_SPLIT \
     --val_split $VAL_SPLIT \
     --num_bins $NUM_BINS \

@@ -147,11 +147,14 @@ def balanced_data_transform(sample, augment_data=False):
 
 
 class BalancedTartanDrive(Dataset):
-    def __init__(self, data_dir_lc, data_dir_hc, transform=None, augment_data = False, high_cost_prob=None):
+    def __init__(self, data_dir_lc, data_dir_hc, map_metadata, crop_params, transform=None, augment_data = False, high_cost_prob=None):
         self.data_dir_lc = data_dir_lc
         self.data_dir_hc = data_dir_hc
         self.transform = transform
         self.augment_data = augment_data
+
+        self.map_metadata = map_metadata
+        self.crop_params = crop_params
 
         cmds_dir_lc = os.path.join(self.data_dir_lc, "cmds.npy")
         costs_dir_lc = os.path.join(self.data_dir_lc, "costs.npy")
@@ -225,7 +228,7 @@ class BalancedTartanDrive(Dataset):
         sample["heightmap"] = heightmap
         sample["rgbmap"] = rgbmap
 
-        patches, masks = self.get_crops(heightmaps=heightmap, rgbmaps=rgbmap)
+        patches, masks = self.get_crops(heightmaps=heightmap, rgbmaps=rgbmap, map_metadata=self.map_metadata, crop_params=self.crop_params)
 
         sample["patches"] = patches
         sample["masks"] = masks
@@ -235,31 +238,10 @@ class BalancedTartanDrive(Dataset):
 
         return sample
 
-    def get_crops(self, heightmaps, rgbmaps):
+    def get_crops(self, heightmaps, rgbmaps, map_metadata, crop_params):
         '''Returns (patches, costs)
         '''
         # Set up TerrainMap object
-        map_height = 12.0 # [m]
-        map_width  = 12.0 # [m]
-        resolution = 0.02
-        origin     = [-2.0, -6.0]
-
-        crop_width = 2.0  # in meters
-        crop_size = [crop_width, crop_width]
-        output_size = [64, 64]
-
-        # TODO. Make sure the two dicts below are populated using from input parameters
-        map_metadata = {
-            'height': map_height,
-            'width': map_width,
-            'resolution': resolution,
-            'origin': origin
-        }
-
-        crop_params ={
-            'crop_size': crop_size,
-            'output_size': output_size
-        }
 
         min_height = 0
         max_height = 2

@@ -3,34 +3,18 @@ import cv2
 
 from torch.utils.data import Dataset
 import torch
+import yaml
 from torchvision import transforms as T
 from learned_cost_map.terrain_utils.terrain_map_tartandrive import TerrainMap, get_local_path
 
 
 if __name__=="__main__":
     maps = torch.load("maps_dict.pt")
-
-    map_height = 12.0 # [m]
-    map_width  = 12.0 # [m]
-    resolution = 0.02
-    origin     = [-2.0, -6.0]
-
-    crop_width = 2.0  # in meters
-    crop_size = [crop_width, crop_width]
-    output_size = [224, 224]
-
-    # TODO. Make sure the two dicts below are populated using from input parameters
-    map_metadata = {
-        'height': map_height,
-        'width': map_width,
-        'resolution': resolution,
-        'origin': origin
-    }
-
-    crop_params ={
-        'crop_size': crop_size,
-        'output_size': output_size
-    }
+    map_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/map_params.yaml"
+    with open(map_config, "r") as file:
+        map_info = yaml.safe_load(file)
+    map_metadata = map_info["map_metadata"]
+    crop_params = map_info["crop_params"]
 
     device = "cpu"
     tm = TerrainMap(maps=maps, map_metadata=map_metadata, device=device)

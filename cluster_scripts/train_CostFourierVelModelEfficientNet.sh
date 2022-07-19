@@ -35,6 +35,8 @@ GAMMA=0.95
 EVAL_INTERVAL=1
 SAVE_INTERVAL=1
 NUM_WORKERS=10
+MODELS_DIR=/data/datasets/mguamanc/learned_cost_map/models
+MAP_CONFIG=/data/datasets/mguamanc/learned_cost_map/configs/map_params.yaml
 
 
 
@@ -63,7 +65,9 @@ ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --data_dir $DATA_DIR \
     --train_split $TRAIN_SPLIT \
     --val_split $VAL_SPLIT \
+    --models_dir $MODELS_DIR \
     --log_dir $RUN_NAME \
+    --map_config $MAP_CONFIG \
     --num_epochs $NUM_EPOCHS \
     --batch_size $BATCH_SIZE \
     --seq_length $SEQ_LENGTH \

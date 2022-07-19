@@ -4,6 +4,7 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import yaml
 
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
@@ -13,31 +14,56 @@ from nav_msgs.msg import OccupancyGrid, MapMetaData, Odometry
 import time
 
 from learned_cost_map.utils.costmap_utils import produce_costmap, rosmsgs_to_maps
-from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostFourierVelModelEfficientNet
+from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostFourierVelModelEfficientNet, CostModelEfficientNet, CostFourierVelModelSmall, CostFourierVelModelRGB
 
 
 class CostmapNode(object):
-    def __init__(self, model_name, saved_model, saved_freqs):
+    def __init__(self, model_name, saved_model, saved_freqs, map_config, costmap_config, height_map_topic, rgb_map_topic, odometry_topic):
         self.cvbridge = CvBridge()
 
-        rospy.Subscriber('/local_height_map_inflate', Image, self.handle_height_inflate, queue_size=1)
-        rospy.Subscriber('/local_rgb_map_inflate', Image, self.handle_rgb_inflate, queue_size=1)
-        rospy.Subscriber('/integrated_to_init', Odometry, self.handle_odom, queue_size=1)
+        rospy.Subscriber(height_map_topic, Image, self.handle_height_inflate, queue_size=1)
+        rospy.Subscriber(rgb_map_topic, Image, self.handle_rgb_inflate, queue_size=1)
+        rospy.Subscriber(odometry_topic, Odometry, self.handle_odom, queue_size=1)
         self.heightmap_inflate = None
         self.rgbmap_inflate = None
         self.vel = None
 
         # Load trained model to produce costmaps
+        # self.fourier_freqs = None
+        # if model_name=="CostModel":
+        #     self.model = CostModel(input_channels=8, output_size=1)
+        # elif model_name=="CostVelModel":
+        #     self.model = CostVelModel(input_channels=8, embedding_size=512, output_size=1)
+        # elif model_name=="CostFourierVelModel":
+        #     self.model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+        #     self.fourier_freqs = torch.load(saved_freqs)
+        # elif model_name=="CostFourierVelModelEfficientNet":
+        #     model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+        #     self.fourier_freqs = torch.load(saved_freqs)
+        # else:
+        #     raise NotImplementedError()
+
+        pretrained=False
+        embedding_size=512
+        mlp_size=512
         self.fourier_freqs = None
         if model_name=="CostModel":
             self.model = CostModel(input_channels=8, output_size=1)
         elif model_name=="CostVelModel":
-            self.model = CostVelModel(input_channels=8, embedding_size=512, output_size=1)
+            self.model = CostVelModel(input_channels=8, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1)
         elif model_name=="CostFourierVelModel":
-            self.model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+            self.model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
             self.fourier_freqs = torch.load(saved_freqs)
+        elif model_name=="CostModelEfficientNet":
+            self.model = CostModelEfficientNet(input_channels=8, output_size=1)
         elif model_name=="CostFourierVelModelEfficientNet":
-            model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=16, embedding_size=512, output_size=1)
+            self.model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1)
+            self.fourier_freqs = torch.load(saved_freqs)
+        elif model_name=="CostFourierVelModelSmall":
+            self.model = CostFourierVelModelSmall(input_channels=8, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1)
+            self.fourier_freqs = torch.load(saved_freqs)
+        elif model_name=="CostFourierVelModelRGB":
+            self.model = CostFourierVelModelRGB(input_channels=3, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1)
             self.fourier_freqs = torch.load(saved_freqs)
         else:
             raise NotImplementedError()
@@ -49,25 +75,15 @@ class CostmapNode(object):
 
 
         # Define map metadata so that we know how many cells we need to query to produce costmap
-        map_height = 12.0 # [m]
-        map_width  = 12.0 # [m]
-        resolution = 0.04
-        origin     = [-2.0, -6.0]
-        self.map_metadata = {
-            'height': map_height,
-            'width': map_width,
-            'resolution': resolution,
-            'origin': origin
-        }
+        with open(map_config, "r") as file:
+            map_info = yaml.safe_load(file)
+        self.map_metadata = map_info["map_metadata"]
+        self.crop_params = map_info["crop_params"]
 
-        crop_width = 2.0  # in meters
-        crop_size = [crop_width, crop_width]
-        output_size = [64, 64]
-
-        self.crop_params ={
-            'crop_size': crop_size,
-            'output_size': output_size
-        }
+        with open(costmap_config, "r") as file:
+            costmap_params = yaml.safe_load(file)
+        self.costmap_batch_size = costmap_params["batch_size"]
+        self.costmap_stride = costmap_params["stride"]
 
         # We will take the header of the rgbmap to populate the header of the output occupancy grid
         self.header = None 
@@ -110,7 +126,7 @@ class CostmapNode(object):
         maps = rosmsgs_to_maps(self.rgbmap_inflate, self.heightmap_inflate)
         before = time.time()
         # import pdb;pdb.set_trace()
-        costmap = produce_costmap(self.model, maps, self.map_metadata, self.crop_params, vel=self.vel, fourier_freqs=self.fourier_freqs)
+        costmap = produce_costmap(self.model, maps, self.map_metadata, self.crop_params, costmap_batch_size=self.costmap_batch_size, costmap_stride=self.costmap_stride, vel=self.vel, fourier_freqs=self.fourier_freqs)
         print(f"Takes {time.time()-before} seconds to produce a costmap")
 
         costmap_img = Image()
@@ -146,16 +162,16 @@ if __name__ == '__main__':
     rospy.loginfo("learned_costmap_node initialized")
     model_dir = rospy.get_param("~model_dir")
     model_name = rospy.get_param("~model_name")
-    if (model_dir is None) or (model_name is None):
+    map_config = rospy.get_param("~map_config")
+    costmap_config = rospy.get_param("~costmap_config")
+    height_map_topic = rospy.get_param("~height_map_topic")
+    rgb_map_topic = rospy.get_param("~rgb_map_topic")
+    odometry_topic = rospy.get_param("~odometry_topic")
+    if (model_dir is None) or (model_name is None) or (map_config is None):
         raise NotImplementedError()
     saved_model = os.path.join(model_dir, 'epoch_50.pt')
     saved_freqs = os.path.join(model_dir, 'fourier_freqs.pt')
-    node = CostmapNode(model_name, saved_model, saved_freqs)
+    node = CostmapNode(model_name, saved_model, saved_freqs, map_config, costmap_config)
     r = rospy.Rate(10)
     while not rospy.is_shutdown(): # loop just for visualization
         node.publish_costmap()
-
-
-        
-
-

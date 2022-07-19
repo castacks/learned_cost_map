@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import yaml
 from torchvision import transforms as T
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -97,7 +98,7 @@ def patches_to_imgs(patches_tensor):
 
     return rgb_maps, height_maps
 
-def main(model_name, saved_model, saved_freqs):
+def main(model_name, saved_model, saved_freqs, map_config):
     batch_size = 1
     seq_length = 1
     # data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
@@ -109,7 +110,12 @@ def main(model_name, saved_model, saved_freqs):
     num_workers = 4
     shuffle_train = False
     shuffle_val = False
-    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
+    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, map_config)
+
+    with open(map_config, "r") as file:
+        map_info = yaml.safe_load(file)
+    map_metadata = map_info["map_metadata"]
+    crop_params = map_info["crop_params"]
 
     fig = plt.figure()
     front_facing_ax = fig.add_subplot(221)
@@ -180,12 +186,6 @@ def main(model_name, saved_model, saved_freqs):
         local_path = torch.index_select(local_path, 1, torch.LongTensor([1, 0, 2]))
         local_path[:,1] = -local_path[:,1]
 
-        map_metadata = {
-                'height': 12.0,
-                'width': 12.0,
-                'resolution': 0.02,
-                'origin': [-2.0, -6.0]
-            }
         path_pix_x, path_pix_y = local_path_to_pixels(local_path, map_metadata)
         gt_costmap = torch.zeros(rgb_map_array.shape[:-1])
         pred_costmap = torch.zeros(rgb_map_array.shape[:-1])
@@ -261,4 +261,5 @@ if __name__=="__main__":
 
     saved_model = "/home/mateo/models/train_CostFourierVelModel/epoch_50.pt"
     saved_freqs = "/home/mateo/models/train_CostFourierVelModel/fourier_freqs.pt"
-    main(model_name, saved_model, saved_freqs)
+    map_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/map_params.yaml"
+    main(model_name, saved_model, saved_freqs, map_config)

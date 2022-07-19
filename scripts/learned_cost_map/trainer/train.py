@@ -1,4 +1,5 @@
 import argparse
+import yaml
 from collections import OrderedDict
 import numpy as np
 import os
@@ -59,8 +60,7 @@ def get_val_metrics(model, val_loader, fourier_freqs=None):
     return avg_dict(all_metrics)
 
 
-def main(model_name, log_dir, num_epochs = 20, batch_size = 256, 
-         embedding_size = 512, mlp_size = 512, seq_length = 1, grad_clip = None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, train_lc_dir=None, train_hc_dir=None, val_lc_dir=None, val_hc_dir=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None, fourier_scale=10.0, fine_tune=False, saved_model=None, saved_freqs=None, wanda=False, just_eval=False):
+def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_size = 256, embedding_size = 512, mlp_size = 512, seq_length = 1, grad_clip = None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, train_lc_dir=None, train_hc_dir=None, val_lc_dir=None, val_hc_dir=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None, fourier_scale=10.0, fine_tune=False, saved_model=None, saved_freqs=None, wanda=False, just_eval=False):
 
     if (data_root_dir is None):
         raise NotImplementedError()
@@ -69,40 +69,34 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256,
     else:
         print("\n=====\nROBOT IS ATV\n=====\n")
     ## Obtain DataLoaders
+
+    with open(map_config, "r") as file:
+        map_info = yaml.safe_load(file)
+    map_metadata = map_info["map_metadata"]
+    crop_params = map_info["crop_params"]
+
     print("Getting data loaders")
     time_data = time.time()
     if balanced_loader and (not wanda):
         print("Using ATV balanced loader")
         assert ((train_lc_dir is not None) and (train_hc_dir is not None) and (val_lc_dir is not None) and (val_hc_dir is not None)), "balanced_loader needs train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir to NOT be None."
 
-        train_loader, val_loader = get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, augment_data=augment_data, high_cost_prob=high_cost_prob)
+        train_loader, val_loader = get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, map_config, augment_data=augment_data, high_cost_prob=high_cost_prob)
     elif wanda and (not balanced_loader):
         print("Using Wanda loader")
         assert ((train_split is not None) and (val_split is not None)), "Wanda dataloader needs train_split, val_split to NOT be None."
-        map_metadata = {
-                'height': 10.0,
-                'width': 10.0,
-                'resolution': 0.02,
-                # 'origin': [0.0, -5.0]
-                'origin': [-2.0, -5.0]
-                }
-
-        crop_params ={
-            'crop_size': [2.0, 2.0],
-            'output_size': [64,64]
-        }
         train_loader, val_loader = get_wanda_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=augment_data, map_metadata=map_metadata, crop_params=crop_params)
     elif wanda and balanced_loader:
         print("Using Wanda balanced loader")
         assert ((train_lc_dir is not None) and (train_hc_dir is not None) and (val_lc_dir is not None) and (val_hc_dir is not None)), "balanced_wanda_loader needs train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir to NOT be None."
 
-        train_loader, val_loader = get_balanced_wanda_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, augment_data=augment_data, high_cost_prob=high_cost_prob)
+        train_loader, val_loader = get_balanced_wanda_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, map_config, augment_data=augment_data, high_cost_prob=high_cost_prob)
         
     else:
         print("Using Yamaha loader")
         assert ((train_split is not None) and (val_split is not None)), "Standard dataloader needs train_split, val_split to NOT be None."
 
-        train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=augment_data)
+        train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, map_config, augment_data=augment_data)
     print(f"Got data loaders. {time.time()-time_data}")
 
     ## Set up model
@@ -163,6 +157,8 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256,
         config = {
             'model_name': model_name,
             'log_dir': log_dir,
+            'map_metadata': map_metadata,
+            'crop_params': crop_params,
             'batch_size': batch_size,
             'embedding_size': embedding_size, 
             'mlp_size': mlp_size,
@@ -216,12 +212,12 @@ def main(model_name, log_dir, num_epochs = 20, batch_size = 256,
             print(epoch, val_metrics)
 
         if ((epoch+1)%save_interval == 0) and (not just_eval):
-            models_dir = os.path.join("models", log_dir)
-            if not os.path.exists(models_dir):
-                os.makedirs(models_dir)
-            save_dir = os.path.join(models_dir, f"epoch_{epoch+1}.pt")
+            train_models_dir = os.path.join(models_dir, log_dir)
+            if not os.path.exists(train_models_dir):
+                os.makedirs(train_models_dir)
+            save_dir = os.path.join(train_models_dir, f"epoch_{epoch+1}.pt")
             if fourier_freqs is not None:
-                freqs_dir = os.path.join(models_dir, f"fourier_freqs.pt")
+                freqs_dir = os.path.join(train_models_dir, f"fourier_freqs.pt")
                 torch.save(fourier_freqs.cpu(), freqs_dir)
             torch.save(model.state_dict(), save_dir)
 
@@ -234,7 +230,9 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
     parser.add_argument('--train_split', type=str, help='Path to the file that contains the training split text file.')
     parser.add_argument('--val_split', type=str, help='Path to the file that contains the validation split text file.')
-    parser.add_argument('--log_dir', type=str, required=True, help='String for where the models will be saved.')
+    parser.add_argument('--models_dir', type=str, required=True, help='String for where all models will be saved.', default="models")
+    parser.add_argument('--log_dir', type=str, required=True, help='String for where the models for this run will be saved.')
+    parser.add_argument('--map_config', type=str, required=True, help='Path to YAML config file containing map parameters.')
     parser.add_argument('--balanced_loader', action='store_true', help="Use the balanced dataloader implemented in TartanDriveBalancedDataset.")
     parser.add_argument('--train_lc_dir', type=str, help='Name of directory where the low cost training set is located. Relative to data_dir. Only required if balanced_loader flag is present.')
     parser.add_argument('--train_hc_dir', type=str, help='Name of directory where the high cost training set is located. Relative to data_dir. Only required if balanced_loader flag is present.')
@@ -280,7 +278,9 @@ if __name__ == '__main__':
 
     # Run training loop
     main(model_name=args.model,
+         models_dir=args.models_dir,
          log_dir=args.log_dir, 
+         map_config=args.map_config,
          num_epochs = args.num_epochs, 
          batch_size = args.batch_size, 
          embedding_size = args.embedding_size,

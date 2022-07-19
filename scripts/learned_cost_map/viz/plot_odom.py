@@ -4,6 +4,7 @@ from learned_cost_map.utils.costmap_utils import local_path_to_pixels
 from learned_cost_map.viz.visualize_model_output import tensor_to_img
 
 import torch
+import yaml
 import matplotlib.pyplot as plt
 
 def main():
@@ -12,10 +13,16 @@ def main():
     data_root_dir = '/home/mateo/Data/SARA/TartanDriveCost/Trajectories'
     train_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
     val_split = '/home/mateo/Data/SARA/TartanDriveCost/Splits/train.txt'
+    map_config = '/home/mateo/phoenix_ws/src/learned_cost_map/configs/map_params.yaml'
+    with open(map_config, "r") as file:
+        map_info = yaml.safe_load(file)
+    map_metadata = map_info["map_metadata"]
+    crop_params = map_info["crop_params"]
+
     num_workers = 4
     shuffle_train = False
     shuffle_val = False
-    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
+    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, map_config)
     print("Fine")
 
     fig = plt.figure()
@@ -30,12 +37,7 @@ def main():
         vels = torch.linalg.norm(odom_tensor[:,7:10], dim=1)
         print(vels)
         local_path = get_local_path(odom_tensor)
-        map_metadata = {
-                'height': 12.0,
-                'width': 12.0,
-                'resolution': 0.02,
-                'origin': [-6.0, -2.0]
-            }
+
         # import pdb;pdb.set_trace()
         path_pix_x, path_pix_y = local_path_to_pixels(local_path, map_metadata)
         print(rgb_map_array.shape[:-1])

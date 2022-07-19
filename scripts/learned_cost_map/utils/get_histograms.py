@@ -4,14 +4,14 @@ from learned_cost_map.trainer.utils import get_dataloaders, preprocess_data
 import matplotlib.pyplot as plt
 import os
 
-def main(data_dir, train_split, val_split, num_bins, output_dir):
+def main(data_dir, map_config, train_split, val_split, num_bins, output_dir):
     batch_size = 1
     seq_length = 1
 
     num_workers = 1
     shuffle_train = False
     shuffle_val = False
-    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val)
+    train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, map_config)
 
     train_costs = []
     train_speeds = []
@@ -122,6 +122,7 @@ def main(data_dir, train_split, val_split, num_bins, output_dir):
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
+    parser.add_argument('--map_config', type=str, required=True, help='Path to YAML config file containing map parameters.')
     parser.add_argument('--train_split', type=str, required=True, help='Path to the file that contains the training split text file.')
     parser.add_argument('--val_split', type=str, required=True, help='Path to the file that contains the validation split text file.')
     parser.add_argument("--num_bins", type=int, default=20, help="How many bins to use for the cost and velocity histograms.")
@@ -130,4 +131,4 @@ if __name__=="__main__":
 
     args = parser.parse_args()
 
-    main(args.data_dir, args.train_split, args.val_split, args.num_bins, args.output_dir)
+    main(args.data_dir, args.map_config, args.train_split, args.val_split, args.num_bins, args.output_dir)

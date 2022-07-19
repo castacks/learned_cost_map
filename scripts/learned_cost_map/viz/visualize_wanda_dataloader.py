@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import yaml
 from torchvision import transforms as T
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -176,19 +177,14 @@ if __name__=="__main__":
     # saved_model = "/home/mateo/models/train_CostFourierVelModel/epoch_50.pt"
     # saved_freqs = "/home/mateo/models/train_CostFourierVelModel/fourier_freqs.pt"
 
-    saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_bal_aug_l2/epoch_50.pt"
-    saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/trainer/models/train_CostFourierVelModel_bal_aug_l2/fourier_freqs.pt"
+    saved_model = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModel_bal_aug_l2/epoch_50.pt"
+    saved_freqs = "/home/mateo/phoenix_ws/src/learned_cost_map/models/train_CostFourierVelModel_bal_aug_l2/fourier_freqs.pt"
 
-    map_metadata = {
-                'height': 10.0,
-                'width': 10.0,
-                'resolution': 0.02,
-                # 'origin': [0.0, -5.0]
-                'origin': [-2.0, -5.0]
-                }
+    map_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/wanda_map_params.yaml"
 
-    crop_params ={
-        'crop_size': [2.0, 2.0],
-        'output_size': [64,64]
-    }
+    with open(map_config, "r") as file:
+        map_info = yaml.safe_load(file)
+    map_metadata = map_info["map_metadata"]
+    crop_params = map_info["crop_params"]
+
     main(data_root_dir, train_split, val_split, model_name, saved_model, saved_freqs, map_metadata=map_metadata, crop_params=crop_params)

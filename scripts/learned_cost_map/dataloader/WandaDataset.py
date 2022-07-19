@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import numpy as np
+import yaml
 import cv2
 
 from torch.utils.data import Dataset
@@ -445,32 +446,11 @@ def wanda_data_transform(sample, augment_data=False):
 
 if __name__ == '__main__':
 
-    # map_height = 12.0 # [m]
-    # map_width  = 12.0 # [m]
-    # resolution = 0.02
-    # origin     = [-2.0, -6.0]
-    
-    map_height = 10.0 # [m]
-    map_width  = 10.0 # [m]
-    resolution = 0.02
-    # origin     = [0.0, -5.0]
-    origin     = [-2.0, -5.0]
-
-    crop_width = 2.0  # in meters
-    crop_size = [crop_width, crop_width]
-    output_size = [64, 64]
-
-    map_metadata = {
-        'height': map_height,
-        'width': map_width,
-        'resolution': resolution,
-        'origin': origin
-    }
-
-    crop_params ={
-        'crop_size': crop_size,
-        'output_size': output_size
-    }
+    map_config = "/home/mateo/phoenix_ws/src/learned_cost_map/configs/wanda_map_params.yaml"
+    with open(map_config, "r") as file:
+        map_info = yaml.safe_load(file)
+    map_metadata = map_info["map_metadata"]
+    crop_params = map_info["crop_params"]
 
     train_split = '/home/mateo/phoenix_ws/src/learned_cost_map/scripts/learned_cost_map/splits/wanda_train.txt'
     data_root_dir = '/home/mateo/Data/SARA/tartancost_wanda'

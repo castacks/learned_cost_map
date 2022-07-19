@@ -28,6 +28,8 @@ class DatasetBase(Dataset):
     '''
     def __init__(self, \
         framelistfile, \
+        map_metadata, \
+        crop_params, \
         dataroot = "", \
         datatypes = "img0,img1,imgc,disp0,heightmap,rgbmap,cmd,odom,cost,patches,imu", \
         modalitylens = [1,1,1,1,1,1,1,1,1,1,10], \
@@ -39,6 +41,8 @@ class DatasetBase(Dataset):
 
         super(DatasetBase, self).__init__()
         self.framelistfile = framelistfile
+        self.map_metadata = map_metadata
+        self.crop_params = crop_params
         self.dataroot = dataroot
         self.transform = transform
         self.imu_freq = imu_freq
@@ -164,9 +168,9 @@ class DatasetBase(Dataset):
             if datatype == 'disp0':
                 datapathlist.append(trajstr + '/depth_left/' + framestr + '.npy')
             if datatype == 'heightmap':
-                datapathlist.append(trajstr + '/height_map_vo/' + framestr + '.npy')
+                datapathlist.append(trajstr + '/height_map/' + framestr + '.npy')
             if datatype == 'rgbmap':
-                datapathlist.append(trajstr + '/rgb_map_vo/' + framestr + '.npy')
+                datapathlist.append(trajstr + '/rgb_map/' + framestr + '.npy')
 
         return datapathlist
 
@@ -231,7 +235,7 @@ class DatasetBase(Dataset):
         # Load patches only after everything else is loaded
         if "patches" in self.datatypelist:
             datalen = self.modalitylenlist[self.datatypelist.index("patches")]
-            patcheslist, masks = self.get_crops(sample["heightmap"], sample["rgbmap"], sample["odom"])
+            patcheslist, masks = self.get_crops(sample["heightmap"], sample["rgbmap"], sample["odom"], self.map_metadata, self.crop_params)
             sample["patches"] = patcheslist
             sample["masks"] = masks
 
@@ -280,31 +284,9 @@ class DatasetBase(Dataset):
                 print('    Processed {} trajectories...'.format(k))
         return np.array(datalist)
 
-    def get_crops(self, heightmaps, rgbmaps, odom):
+    def get_crops(self, heightmaps, rgbmaps, odom, map_metadata, crop_params):
         '''Returns (patches, costs)
         '''
-        # Set up TerrainMap object
-        map_height = 12.0 # [m]
-        map_width  = 12.0 # [m]
-        resolution = 0.02
-        origin     = [-2.0, -6.0]
-
-        crop_width = 2.0  # in meters
-        crop_size = [crop_width, crop_width]
-        output_size = [64, 64]
-
-        # TODO. Make sure the two dicts below are populated using from input parameters
-        map_metadata = {
-            'height': map_height,
-            'width': map_width,
-            'resolution': resolution,
-            'origin': origin
-        }
-
-        crop_params ={
-            'crop_size': crop_size,
-            'output_size': output_size
-        }
 
         min_height = 0
         max_height = 2
@@ -324,8 +306,8 @@ class DatasetBase(Dataset):
         local_path = get_local_path(torch.from_numpy(odom)).to(device)
         
         ## GPS odom is 90 degrees rotated NED To FLU
-        # local_path = torch.index_select(local_path, 1, torch.LongTensor([1, 0, 2]))
-        # local_path[:,1] = -local_path[:,1]
+        local_path = torch.index_select(local_path, 1, torch.LongTensor([1, 0, 2]))
+        local_path[:,1] = -local_path[:,1]
 
         # patches = tm.get_crop_batch(local_path, crop_params)
         patches, masks = tm.get_crop_batch_and_masks(local_path, crop_params)
