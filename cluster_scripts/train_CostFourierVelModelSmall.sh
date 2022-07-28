@@ -32,6 +32,8 @@ GAMMA=0.99
 EVAL_INTERVAL=1
 SAVE_INTERVAL=1
 NUM_WORKERS=10
+EMBEDDING_SIZE=512
+MLP_SIZE=32
 MODELS_DIR=/data/datasets/mguamanc/learned_cost_map/models
 MAP_CONFIG=/data/datasets/mguamanc/learned_cost_map/configs/map_params.yaml
 
@@ -70,6 +72,8 @@ ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --val_hc_dir $VAL_HC_DIR \
     --num_epochs $NUM_EPOCHS \
     --batch_size $BATCH_SIZE \
+    --embedding_size $EMBEDDING_SIZE \
+    --mlp_size $MLP_SIZE \
     -lr $LEARNING_RATE \
     --gamma $GAMMA \
     --weight_decay $WEIGHT_DECAY \
