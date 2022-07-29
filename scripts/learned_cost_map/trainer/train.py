@@ -46,9 +46,9 @@ def run_train_epoch(model, model_name, train_loader, optimizer, scheduler, grad_
         print(f"Training batch {i}/{len(train_loader)}")
         input, labels = preprocess_data(data_dict, fourier_freqs)
         if model_name == "EnsembleCostFourierVelModel":
-            loss, _metric = traversability_cost_loss(model, input, labels)
-        else:
             loss, _metric = ensemble_cost_loss(model, input, labels)
+        else:
+            loss, _metric = traversability_cost_loss(model, input, labels)
         _metric["lr"] = torch.Tensor([curr_lr])
         all_metrics.append(_metric)
         optimizer.zero_grad()
@@ -60,13 +60,17 @@ def run_train_epoch(model, model_name, train_loader, optimizer, scheduler, grad_
     scheduler.step()
     return avg_dict(all_metrics)
 
-def get_val_metrics(model, val_loader, fourier_freqs=None):
+def get_val_metrics(model, model_name, val_loader, fourier_freqs=None):
     model.eval()
     all_metrics = []
     with torch.no_grad():
         for i,data_dict in enumerate(val_loader):
             print(f"Validation batch {i}/{len(val_loader)}")
             x, y = preprocess_data(data_dict, fourier_freqs)
+            if model_name == "EnsembleCostFourierVelModel":
+                loss, _metric = ensemble_cost_loss(model, x, y)
+            else:
+                loss, _metric = traversability_cost_loss(model, x, y)
             loss, _metric = traversability_cost_loss(model, x, y)
             all_metrics.append(_metric)
 
@@ -213,7 +217,7 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
             print(f"Training epoch: {time.time()-train_time} s")
         print(f"Validation, epoch {epoch}")
         val_time = time.time()
-        val_metrics = get_val_metrics(model, val_loader, fourier_freqs)
+        val_metrics = get_val_metrics(model, model_name, val_loader, fourier_freqs)
         print(f"Validation epoch: {time.time()-val_time} s")
 
         #TODO : add plotting code for metrics (required for multiple parts)
