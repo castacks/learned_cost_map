@@ -198,6 +198,66 @@ class CostFourierVelModelRGB(nn.Module):
         output = self.sigmoid(output)
         return output
 
+class EnsembleHead(nn.Module):
+    def __init__(self, mlp_size=32, output_size=1):
+        super().__init__()
+        self.model = nn.Sequential(
+            nn.Linear(in_features=mlp_size, out_features=mlp_size),
+            nn.ReLU(),
+            nn.Linear(in_features=mlp_size, out_features=output_size)
+        )
+
+    def forward(self, input_data):
+        out = self.model(input_data)
+
+        return out
+
+class EnsembleCostFourierVelModel(nn.Module):
+    def __init__(self, input_channels=8, ff_size=16, embedding_size=512, mlp_size=512, output_size=1, num_heads=32, pretrained=False):
+        super().__init__()
+        self.model = models.resnet18(pretrained)
+        self.model.conv1 = nn.Conv2d(in_channels=input_channels, out_channels=64, kernel_size=(7,7), stride=(2,2), padding=(3,3), bias=False)
+        self.model.fc = nn.Linear(in_features=512, out_features=embedding_size, bias=True)
+
+        self.vel_mlp = nn.Sequential(
+            nn.Linear(in_features=ff_size*2, out_features=mlp_size),
+            nn.ReLU(),
+            nn.Linear(in_features=mlp_size, out_features=mlp_size),
+            nn.ReLU(),
+            nn.Linear(in_features=mlp_size, out_features=mlp_size),
+            nn.ReLU()
+        )
+
+        self.output_ensemble = nn.ModuleList(EnsembleHead(mlp_size=embedding_size+mlp_size, output_size=output_size) for k in range(num_heads))
+
+        self.output_mlp = nn.Sequential(
+            nn.Linear(in_features=embedding_size+mlp_size, out_features=output_size)
+        )
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, input_data):
+        x = input_data["patches"]
+        vel = input_data["fourier_vels"]
+        # import pdb;pdb.set_trace()
+        processed_maps = self.model(x)
+        processed_vel  = self.vel_mlp(vel)
+        if len(processed_maps.shape) < 2:
+            processed_maps = processed_maps.view(1, -1)
+        if len(processed_vel.shape) < 2:
+            processed_vel = processed_vel.view(1, -1)
+        combined_features = torch.cat([processed_maps, processed_vel], dim=1)
+
+        outputs = []
+        for i, head in enumerate(self.output_ensemble):
+            output = head(combined_features)
+            output = self.sigmoid(output)
+            outputs.append(output)
+
+        # output = self.output_mlp(combined_features)
+        # output = self.sigmoid(output)
+        return outputs
+
+
 if __name__ == "__main__":
     model = CostModelEfficientNet(8, 1)
     print(model)
