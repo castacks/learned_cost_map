@@ -6,7 +6,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostModelEfficientNet, CostFourierVelModelEfficientNet, CostFourierVelModelSmall, CostFourierVelModelRGB
+from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostModelEfficientNet, CostFourierVelModelEfficientNet, CostFourierVelModelSmall, CostFourierVelModelRGB, EnsembleCostFourierVelModel
 
 from learned_cost_map.trainer.utils import get_dataloaders, get_balanced_dataloaders, preprocess_data, avg_dict, get_FFM_freqs, get_wanda_dataloaders, get_balanced_wanda_dataloaders
 
@@ -27,15 +27,28 @@ def traversability_cost_loss(model, input, labels):
 
     return loss, OrderedDict(loss=loss, random_loss=random_loss)
 
-def run_train_epoch(model, train_loader, optimizer, scheduler, grad_clip=None, fourier_freqs=None):
+def ensemble_cost_loss(model, input, labels):
+    outputs = model(input)
+    criterion = nn.MSELoss()
+    losses = [criterion(outputs[k], labels) for k in range(len(outputs))]
+    total_loss = 0
+    for loss in losses:
+        total_loss += loss
+    avg_loss = total_loss/len(losses)
+
+    return total_loss, OrderedDict(total_loss=total_loss, avg_loss=avg_loss)
+
+def run_train_epoch(model, model_name, train_loader, optimizer, scheduler, grad_clip=None, fourier_freqs=None):
     model.train()
     all_metrics = []
     curr_lr = scheduler.get_last_lr()[0]
     for i, data_dict in enumerate(train_loader):
         print(f"Training batch {i}/{len(train_loader)}")
         input, labels = preprocess_data(data_dict, fourier_freqs)
-
-        loss, _metric = traversability_cost_loss(model, input, labels)
+        if model_name == "EnsembleCostFourierVelModel":
+            loss, _metric = traversability_cost_loss(model, input, labels)
+        else:
+            loss, _metric = ensemble_cost_loss(model, input, labels)
         _metric["lr"] = torch.Tensor([curr_lr])
         all_metrics.append(_metric)
         optimizer.zero_grad()
@@ -135,6 +148,13 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
             fourier_freqs = torch.load(saved_freqs)
         else:
             fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
+    elif model_name=="EnsembleCostFourierVelModel":
+        model = EnsembleCostFourierVelModel(input_channels=8, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, num_heads=32, pretrained=pretrained)
+        if fine_tune or just_eval:
+            assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
+            fourier_freqs = torch.load(saved_freqs)
+        else:
+            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
     else:
         raise NotImplementedError()
     
@@ -189,7 +209,7 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
         if not just_eval:
             print(f"Training, epoch {epoch}")
             train_time = time.time()
-            train_metrics = run_train_epoch(model, train_loader, optimizer, scheduler, grad_clip, fourier_freqs)
+            train_metrics = run_train_epoch(model, model_name, train_loader, optimizer, scheduler, grad_clip, fourier_freqs)
             print(f"Training epoch: {time.time()-train_time} s")
         print(f"Validation, epoch {epoch}")
         val_time = time.time()
@@ -226,7 +246,7 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', choices=['CostModel', 'CostVelModel', 'CostFourierVelModel', 'CostModelEfficientNet', 'CostFourierVelModelEfficientNet', 'CostFourierVelModelSmall', 'CostFourierVelModelRGB'], default='CostModel')
+    parser.add_argument('--model', choices=['CostModel', 'CostVelModel', 'CostFourierVelModel', 'CostModelEfficientNet', 'CostFourierVelModelEfficientNet', 'CostFourierVelModelSmall', 'CostFourierVelModelRGB', 'EnsembleCostFourierVelModel'], default='CostModel')
     parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
     parser.add_argument('--train_split', type=str, help='Path to the file that contains the training split text file.')
     parser.add_argument('--val_split', type=str, help='Path to the file that contains the validation split text file.')
