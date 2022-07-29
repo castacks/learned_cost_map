@@ -71,7 +71,6 @@ def get_val_metrics(model, model_name, val_loader, fourier_freqs=None):
                 loss, _metric = ensemble_cost_loss(model, x, y)
             else:
                 loss, _metric = traversability_cost_loss(model, x, y)
-            loss, _metric = traversability_cost_loss(model, x, y)
             all_metrics.append(_metric)
 
     return avg_dict(all_metrics)
@@ -217,7 +216,7 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
             print(f"Training epoch: {time.time()-train_time} s")
         print(f"Validation, epoch {epoch}")
         val_time = time.time()
-        val_metrics = get_val_metrics(model, model_name, val_loader, fourier_freqs)
+        val_metrics = get_val_metrics(model, model_name,    val_loader, fourier_freqs)
         print(f"Validation epoch: {time.time()-val_time} s")
 
         #TODO : add plotting code for metrics (required for multiple parts)
