@@ -171,7 +171,7 @@ if __name__ == '__main__':
         raise NotImplementedError()
     saved_model = os.path.join(model_dir, 'epoch_50.pt')
     saved_freqs = os.path.join(model_dir, 'fourier_freqs.pt')
-    node = CostmapNode(model_name, saved_model, saved_freqs, map_config, costmap_config)
+    node = CostmapNode(model_name, saved_model, saved_freqs, map_config, costmap_config, height_map_topic, rgb_map_topic, odometry_topic)
     r = rospy.Rate(10)
     while not rospy.is_shutdown(): # loop just for visualization
         node.publish_costmap()
