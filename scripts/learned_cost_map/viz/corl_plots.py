@@ -115,20 +115,23 @@ val_df = val_df.melt(id_vars=["Step", "Model"],
              var_name="Seed",
              value_name="Loss")
 
-
+print("Plotting now: ")
 g_train = sns.relplot(x="Step", y="Loss", hue="Model", kind="line", ci="sd", data=train_df)
 g_train.fig.suptitle("Training Loss")
 plt.xlabel('Epoch')
 plt.ylabel('MSE Loss')
 plt.show()
-plt.close()
+# plt.close()
+
+print("Done plotting 1")
 
 g_val = sns.relplot(x="Step", y="Loss", hue="Model", kind="line", ci="sd", data=val_df)
 g_val.fig.suptitle("Validation Loss")
 plt.xlabel('Epoch')
 plt.ylabel('MSE Loss')
 plt.show()
-plt.close()
+# plt.close()
+print("Done plotting 2")
 
 # TODO: Modify here to save the plots if needed
 

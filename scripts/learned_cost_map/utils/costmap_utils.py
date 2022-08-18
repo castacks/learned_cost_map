@@ -231,6 +231,133 @@ def produce_costmap(model, maps, map_metadata, crop_params, costmap_batch_size=2
 
     return costmap
 
+def produce_ensemble_costmap(model, maps, map_metadata, crop_params, costmap_batch_size=256, costmap_stride=20, vel=None, fourier_freqs=None):
+    '''Returns a costmap using a trained model from a maps dict.
+
+    Args:
+        - model:
+            nn.Module object, Torch model used for cost inference.
+        - maps: 
+            A dictionary of maps (as would go into TerrainMap) defined as follows:
+            {
+                'rgb_map': Tensor(C,H,W) where C=3 corresponding to RGB values,
+                'height_map': Tensor(C,H,W) where C=5 corresponding to min,     max, mean, std, invalid_mask where 1's correspond to invalid cells
+            }
+        - map_metadata: 
+            Information about the map in metric space defined as follows: 
+            {
+                'height': map_height [m],
+                'width': map_width [m],
+                'resolution': resolution [m],
+                'origin': origin [m]
+            }
+        - crop_params:
+            Dictionary containing information about the output crops     
+            {
+                'crop_size': [Float, Float] # size in meters of the patch to obtain below the robot,
+                'output_size': [Int, Int] # Size of output image in pixels
+            }
+        - vel:
+            Float of unnormalized velocity at which we want to query the costmap. If name of the model is not CostVelModel or CostFourierVelModel, this should be None.
+        - fourier_freqs:
+            Tensor of fourier frequencies used in the CostFourierVelModel. If the name of the model is different, this should be None.
+            
+    Returns:
+        - costmap:
+            Tensor of dimensions as given by the map_metadata: (height/resolution, width/resolution) containing inferred costmap from learned model.
+    '''
+    print("\n\n\n====\nINSIDE ENSAMBLE PRODUCE COSTMAP\n====\n\n\n")
+    print(f"costmap_batch_size: {costmap_batch_size}, costmap_stride: {costmap_stride}")
+    device = "cuda" # "cuda" if torch.cuda.is_available() else "cpu"
+    tm = TerrainMap(maps=maps, map_metadata=map_metadata, device=device)
+
+
+    # Get tensor of all map poses to be queried
+    map_height = int(map_metadata['height']/map_metadata['resolution'])
+    map_width = int(map_metadata['width']/map_metadata['resolution'])
+    x_pixels = torch.arange(0, map_height, costmap_stride)
+    y_pixels = torch.arange(0, map_width, costmap_stride)
+    x_poses = x_pixels*map_metadata['resolution']+map_metadata["origin"][0]
+    y_poses = y_pixels*map_metadata['resolution']+map_metadata["origin"][1]
+    all_poses = torch.stack(torch.meshgrid(x_poses, y_poses, indexing="ij"), dim=-1).view(-1, 2)
+    # Append orientations
+    all_poses = torch.cat([all_poses, torch.zeros(all_poses.shape[0], 1)], dim=-1).to(device).detach()
+
+    num_cells = all_poses.shape[0]
+    num_batches = ceil(num_cells/costmap_batch_size)
+    batch_starts = [(k)*costmap_batch_size for k in range(num_batches)]
+    batch_ends   = [min(((k+1)*costmap_batch_size), num_cells) for k in range(num_batches)]
+
+    all_costmaps = []
+
+    all_map_vals = None
+    all_invalid = None
+
+    # Query all map poses from TerrainMap
+    for b in range(num_batches):
+        patches = tm.get_crop_batch(poses=all_poses[batch_starts[b]:batch_ends[b]], crop_params=crop_params)
+        invalid_flags = process_invalid_patches(patches, thresh=0.5)
+
+        # Get input to network
+        input_data = {}
+        input_data['patches'] = patches.cuda()
+        if vel is not None:
+            vels_vec = (torch.ones(patches.shape[0], 1) * vel/20.0).cuda()
+        else:
+            vels_vec = None
+        if fourier_freqs is not None:
+            fourier_freqs = fourier_freqs.cuda()
+            fourier_vels = (FourierFeatureMapping(vels_vec, fourier_freqs)).cuda()
+        else:
+            fourier_vels = None
+        input_data['vels'] = vels_vec
+        input_data['fourier_vels'] = fourier_vels
+
+        # Pass patches and vels through network
+        costs = model(input_data)
+        concat_costs = torch.cat(costs, axis=1)
+        if all_map_vals is None:
+            all_map_vals = concat_costs
+            all_invalid = invalid_flags
+        else:
+            all_map_vals = torch.cat([all_map_vals, concat_costs])
+            all_invalid = torch.cat([all_invalid, invalid_flags])
+        
+        # import pdb;pdb.set_trace()
+        # costs[invalid_flags] = 0.5 # TODO Uncomment this line if you want to set high costs to invalid areas
+
+        # if len(costs.shape) > 1:
+        #     costs = costs.squeeze()
+        # if len(costs.shape) < 1:
+        #     costs = costs.view(-1)
+        # all_costs.append(costs)
+    # import pdb;pdb.set_trace()
+    mean_cost = torch.mean(all_map_vals.detach(), axis=1)
+    # mean_cost = all_map_vals[:,1].detach()
+    std_cost = torch.std(all_map_vals.detach(), axis=1)
+    
+    # Handle invalid cells
+    mean_cost[all_invalid] = 1.0
+
+    # Reshape cost predictions into costmap
+    reduced_mean_costmap = mean_cost.view(1, 1, x_pixels.shape[0], y_pixels.shape[0])
+    reduced_std_costmap = std_cost.view(1, 1, x_pixels.shape[0], y_pixels.shape[0])
+
+    mean_costmap = torch.nn.functional.interpolate(reduced_mean_costmap, size=(map_height,map_width), mode='bilinear', align_corners=True)
+    std_costmap = torch.nn.functional.interpolate(reduced_std_costmap, size=(map_height,map_width), mode='bilinear', align_corners=True)
+
+    mean_costmap = mean_costmap.squeeze().cpu().numpy()
+    std_costmap  = std_costmap.squeeze().cpu().numpy()
+
+    for k in range(all_map_vals.shape[1]):
+        costmap_vector = all_map_vals[:,k].detach()
+        costmap_vector[all_invalid] = 1.0
+        reduced_costmap = costmap_vector.view(1, 1, x_pixels.shape[0], y_pixels.shape[0])
+        costmap = torch.nn.functional.interpolate(reduced_costmap, size=(map_height,map_width), mode='bilinear', align_corners=True)
+        costmap = costmap.squeeze().cpu().numpy()
+        all_costmaps.append(costmap)
+
+    return mean_costmap, std_costmap, all_costmaps
 
 
 def rosmsgs_to_maps(rgbmap, heightmap):

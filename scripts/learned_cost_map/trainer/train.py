@@ -15,7 +15,7 @@ import time
 
 USE_WANDB = True
 
-def traversability_cost_loss(model, input, labels):
+def traversability_cost_loss(model, input, labels, mean_cost=None):
     pred_cost = model(input)
     criterion = nn.MSELoss(reduction="sum")
     pred_cost = pred_cost.squeeze()
@@ -25,7 +25,13 @@ def traversability_cost_loss(model, input, labels):
     random_cost = torch.rand(pred_cost.shape).cuda()
     random_loss = criterion(random_cost, labels)/random_cost.shape[0]
 
-    return loss, OrderedDict(loss=loss, random_loss=random_loss)
+    return_dict = OrderedDict(loss=loss, random_loss=random_loss)
+
+    if mean_cost is not None:
+        mean_cost = mean_cost * torch.ones(pred_cost.shape).cuda()
+        mean_loss = criterion(mean_cost, labels)/mean_cost.shape[0]
+        return_dict = OrderedDict(loss=loss, random_loss=random_loss, mean_loss=mean_loss)
+    return loss, return_dict
 
 def ensemble_cost_loss(model, input, labels):
     outputs = model(input)
