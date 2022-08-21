@@ -82,7 +82,7 @@ def get_val_metrics(model, model_name, val_loader, fourier_freqs=None):
     return avg_dict(all_metrics)
 
 
-def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_size = 256, embedding_size = 512, mlp_size = 512, seq_length = 1, grad_clip = None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, train_lc_dir=None, train_hc_dir=None, val_lc_dir=None, val_hc_dir=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None, fourier_scale=10.0, fine_tune=False, saved_model=None, saved_freqs=None, wanda=False, just_eval=False):
+def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_size = 256, embedding_size = 512, mlp_size = 512, num_freqs=16, seq_length = 1, grad_clip = None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, train_lc_dir=None, train_hc_dir=None, val_lc_dir=None, val_hc_dir=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None, fourier_scale=10.0, fine_tune=False, saved_model=None, saved_freqs=None, wanda=False, just_eval=False):
 
     if (data_root_dir is None):
         raise NotImplementedError()
@@ -128,42 +128,42 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
     elif model_name=="CostVelModel":
         model = CostVelModel(input_channels=8, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
     elif model_name=="CostFourierVelModel":
-        model = CostFourierVelModel(input_channels=8, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
+        model = CostFourierVelModel(input_channels=8, ff_size=num_freqs, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
         if fine_tune or just_eval:
             assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
             fourier_freqs = torch.load(saved_freqs)
         else:
-            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
+            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=num_freqs)
     elif model_name=="CostModelEfficientNet":
         model = CostModelEfficientNet(input_channels=8, output_size=1, pretrained=pretrained)
     elif model_name=="CostFourierVelModelEfficientNet":
-        model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
+        model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=num_freqs, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
         if fine_tune or just_eval:
             assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
             fourier_freqs = torch.load(saved_freqs)
         else:
-            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
+            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=num_freqs)
     elif model_name=="CostFourierVelModelSmall":
-        model = CostFourierVelModelSmall(input_channels=8, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
+        model = CostFourierVelModelSmall(input_channels=8, ff_size=num_freqs, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
         if fine_tune or just_eval:
             assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
             fourier_freqs = torch.load(saved_freqs)
         else:
-            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
+            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=num_freqs)
     elif model_name=="CostFourierVelModelRGB":
-        model = CostFourierVelModelRGB(input_channels=3, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
+        model = CostFourierVelModelRGB(input_channels=3, ff_size=num_freqs, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
         if fine_tune or just_eval:
             assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
             fourier_freqs = torch.load(saved_freqs)
         else:
-            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
+            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=num_freqs)
     elif model_name=="EnsembleCostFourierVelModel":
-        model = EnsembleCostFourierVelModel(input_channels=8, ff_size=16, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, num_heads=32, pretrained=pretrained)
+        model = EnsembleCostFourierVelModel(input_channels=8, ff_size=num_freqs, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, num_heads=32, pretrained=pretrained)
         if fine_tune or just_eval:
             assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
             fourier_freqs = torch.load(saved_freqs)
         else:
-            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=16)
+            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=num_freqs)
     else:
         raise NotImplementedError()
     
@@ -271,6 +271,7 @@ if __name__ == '__main__':
     parser.add_argument("-b", "--batch_size", type=int, default=16, help="Batch size for training.")
     parser.add_argument("--embedding_size", type=int, default=512, help="Embedding size of map features after pasing through CNN backbone.")
     parser.add_argument("--mlp_size", type=int, default=512, help="Number of units per layer of the MLP that processes velocity")
+    parser.add_argument("num_freqs", type=int, default=16, help="Number of Fourier frequencies used in Fourier parameterization (m in the paper). Will result in 2*m features.")
     parser.add_argument("--seq_length", type=int, default=1, help="Length of sequence used for training. See TartanDriveDataset for more details.")
     parser.add_argument('--grad_clip', type=float, help='Max norm of gradients. Leave blank for no grad clipping')
     parser.add_argument('-lr', '--learning_rate', type=float, default=1e-3, help='Initial learning rate.')
@@ -314,6 +315,7 @@ if __name__ == '__main__':
          batch_size = args.batch_size, 
          embedding_size = args.embedding_size,
          mlp_size = args.mlp_size,
+         num_freqs = args.num_freqs,
          seq_length = args.seq_length, 
          grad_clip=args.grad_clip, 
          lr = args.learning_rate,

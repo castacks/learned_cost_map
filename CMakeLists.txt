@@ -49,6 +49,7 @@ catkin_python_setup()
 add_message_files(
   FILES
   FloatStamped.msg
+  BoolStamped.msg
   # Message1.msg
   # Message2.msg
 )
