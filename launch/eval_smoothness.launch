@@ -2,7 +2,7 @@
 
 <launch>
 
-    <arg name="cost_stats_dir" default="$(find learned_cost_map)/scripts/learned_cost_map/ros/cost_statistics.yaml"/>
+    <arg name="cost_stats_dir" default="$(find learned_cost_map)/scripts/learned_cost_map/ros/wanda_cost_statistics.yaml"/>
 
     <node pkg="learned_cost_map" type="eval_smoothness_cost.py" name="smoothness_eval_node" output="screen">
         <param name="cost_stats_dir" value="$(arg cost_stats_dir)"/>

@@ -185,10 +185,10 @@ def lin_acc_mag_z_score(data):
 
 
 class SmoothnessRecorder(object):
-    def __init__(self, cost_stats_dir, start_time, end_time):
+    def __init__(self, cost_stats_dir, start_time, end_time, experiment_name=None, output_dir=None):
         
         # Set up subscribers
-        rospy.Subscriber('/novatel/imu/data', Imu, self.handle_imu, queue_size=1)
+        rospy.Subscriber('/wanda/imu/data', Imu, self.handle_imu, queue_size=1)
 
         # Set up publishers
         self.cost = None
@@ -215,6 +215,10 @@ class SmoothnessRecorder(object):
         self.min_freq = 1
         self.max_freq = 30
         # self.num_bins = 5
+        self.start_time = start_time
+        self.end_time = end_time
+        self.experiment_name = experiment_name
+        self.output_dir = output_dir
 
         self.all_smoothness_values = []
         self.all_badgr_values = []
@@ -235,22 +239,45 @@ class SmoothnessRecorder(object):
         lin_acc_z_mag = lin_acc_mag_z_score(np.array([msg.linear_acceleration.z]))
         lin_acc_xyz_mag = lin_acc_mag_xyz_score(linear_accelerations)
 
-        if (rospy.Time.now().to_sec() >= start_time) and (rospy.Time.now().to_sec() <= end_time):
+        if (rospy.Time.now().to_sec() >= self.start_time) and (rospy.Time.now().to_sec() <= self.end_time):
             self.all_smoothness_values.append(cost)
             self.all_badgr_values.append(badgr_cost)
             self.all_linear_acc_z_magnitudes.append(lin_acc_z_mag)
             self.all_linear_acc_xyz_magnitudes.append(lin_acc_xyz_mag)
         else:
-            print(f"Start time: {start_time}")
-            print(f"End time: {end_time}")
+            print(f"Start time: {self.start_time}")
+            print(f"End time: {self.end_time}")
             print(f"Current time: {rospy.Time.now().to_sec()}")
         
-        if (rospy.Time.now().to_sec() > end_time):
+        if (rospy.Time.now().to_sec() > self.end_time):
             print("Done!")
-            print(f"Final avg cost: {np.mean(np.array(self.all_smoothness_values))}") 
-            print(f"Final avg badgr cost: {np.mean(np.array(self.all_badgr_values))}") 
-            print(f"Final z lin acc mag cost: {np.mean(np.array(self.all_linear_acc_z_magnitudes))}")
-            print(f"Final xyz lin acc mag cost: {np.mean(np.array(self.all_linear_acc_xyz_magnitudes))}")
+            # print(f"Final avg cost: {np.mean(np.array(self.all_smoothness_values))}") 
+            # print(f"Final avg badgr cost: {np.mean(np.array(self.all_badgr_values))}") 
+            # print(f"Final z lin acc mag cost: {np.mean(np.array(self.all_linear_acc_z_magnitudes))}")
+            # print(f"Final xyz lin acc mag cost: {np.mean(np.array(self.all_linear_acc_xyz_magnitudes))}")
+
+            smoothness_array = np.array(self.all_smoothness_values)
+            all_badgr_values = np.array(self.all_badgr_values)
+            print(f"Final avg cost (so far): {np.mean(smoothness_array)}")
+            print(f"--Final std cost (so far): {np.std(smoothness_array)}") 
+            print(f"Final avg cost, nonzero (so far): {np.mean(smoothness_array[np.nonzero(smoothness_array)])}")
+            print(f"--Final std cost, nonzero (so far): {np.std(smoothness_array[np.nonzero(smoothness_array)])}")
+            print(f"Final avg badgr cost (so far): {np.mean(np.array(self.all_badgr_values))}")
+            print(f"--Final std badgr cost (so far): {np.std(np.array(self.all_badgr_values))}") 
+            print(f"Final avg z lin acc mag cost (so far): {np.mean(np.array(self.all_linear_acc_z_magnitudes))}")
+            print(f"--Final std z lin acc mag cost (so far): {np.std(np.array(self.all_linear_acc_z_magnitudes))}")
+            print(f"Final avg xyz lin acc mag cost (so far): {np.mean(np.array(self.all_linear_acc_xyz_magnitudes))}")
+            print(f"--Final std xyz lin acc mag cost (so far): {np.std(np.array(self.all_linear_acc_xyz_magnitudes))}")
+
+            if self.experiment_name is not None:
+                if not os.path.exists(self.output_dir):
+                    os.makedirs(self.output_dir)
+                smoothness_array_fp = os.path.join(self.output_dir, f"{self.experiment_name}_smoothness_array.npy")
+                badgr_vals_fp = os.path.join(self.output_dir, f"{self.experiment_name}_badgr_values.npy")
+
+                np.save(smoothness_array_fp, smoothness_array)
+                np.save(badgr_vals_fp, all_badgr_values)
+
 
         print(f"Publishing cost: {cost}")
         cost_msg = FloatStamped()
@@ -264,9 +291,11 @@ if __name__ == "__main__":
     rospy.init_node("smoothness_eval_node", log_level=rospy.INFO)
     rospy.loginfo("Initialized smoothness_eval_node node")
     cost_stats_dir = rospy.get_param("~cost_stats_dir")
-    start_time = 1655160565
-    end_time = 1655160596
-    node = SmoothnessRecorder(cost_stats_dir, start_time, end_time)
+    start_time = 1654885036
+    end_time = 1654885081
+    experiment_name = "ugv_baseline_1"
+    output_dir = "/home/mateo/corl_bumpiness_metrics"
+    node = SmoothnessRecorder(cost_stats_dir, start_time, end_time, experiment_name, output_dir)
     rate = rospy.Rate(100)
 
     while not rospy.is_shutdown():

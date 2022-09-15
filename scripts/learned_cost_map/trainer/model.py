@@ -257,6 +257,100 @@ class EnsembleCostFourierVelModel(nn.Module):
         # output = self.sigmoid(output)
         return outputs
 
+class BaselineGeometricModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.model = nn.Sequential(
+            nn.Linear(in_features=2, out_features=1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, input_data):
+        x = input_data["patches"]
+        vel = input_data["vels"]
+        nn_input = self.patches_vel_to_input(x, vel)
+        output = self.model(nn_input)
+        return output
+
+    def patches_vel_to_input(self, patches, vel):
+        patches_features = torch.mean(patches[:,6,:,:], dim=[-1, -2]).view(-1, 1)
+        nn_input = torch.cat([patches_features, vel], dim=1)#.squeeze()
+        # import pdb;pdb.set_trace()
+        return nn_input
+
+class BaselineVisualGeometricModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.model = nn.Sequential(
+            nn.Linear(in_features=5, out_features=1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, input_data):
+        x = input_data["patches"]
+        vel = input_data["vels"]
+        nn_input = self.patches_vel_to_input(x, vel)
+        output = self.model(nn_input)
+        return output
+
+    def patches_vel_to_input(self, patches, vel):
+        patches_std_features = torch.mean(patches[:,6,:,:], dim=[-1, -2]).view(-1, 1)
+        patches_red_features = torch.mean(patches[:,0,:,:], dim=[-1, -2]).view(-1, 1)
+        patches_green_features = torch.mean(patches[:,1,:,:], dim=[-1, -2]).view(-1, 1)
+        patches_blue_features = torch.mean(patches[:,2,:,:], dim=[-1, -2]).view(-1, 1)
+        nn_input = torch.cat([patches_std_features, patches_red_features, patches_green_features, patches_blue_features, vel], dim=1)#.squeeze()
+        # import pdb;pdb.set_trace()
+        return nn_input
+
+class BaselineGeometricLargeModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.model = nn.Sequential(
+            nn.Linear(in_features=4097, out_features=1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, input_data):
+        x = input_data["patches"]
+        vel = input_data["vels"]
+        nn_input = self.patches_vel_to_input(x, vel)
+        output = self.model(nn_input)
+        return output
+
+    def patches_vel_to_input(self, patches, vel):
+        patches_std_features = torch.flatten(patches[:,6,:,:], start_dim=1)
+        nn_input = torch.cat([patches_std_features, vel], dim=1)#.squeeze()
+        # import pdb;pdb.set_trace()
+        return nn_input
+
+
+class BaselineVisualGeometricLargeModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.model = nn.Sequential(
+            nn.Linear(in_features=16385, out_features=1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, input_data):
+        x = input_data["patches"]
+        vel = input_data["vels"]
+        nn_input = self.patches_vel_to_input(x, vel)
+        output = self.model(nn_input)
+        return output
+
+    def patches_vel_to_input(self, patches, vel):
+        patches_std_features = torch.flatten(patches[:,6,:,:], start_dim=1)
+        patches_red_features = torch.flatten(patches[:,0,:,:], start_dim=1)
+        patches_green_features = torch.flatten(patches[:,1,:,:], start_dim=1)
+        patches_blue_features = torch.flatten(patches[:,2,:,:], start_dim=1)
+        nn_input = torch.cat([patches_std_features, patches_red_features, patches_green_features, patches_blue_features, vel], dim=1)#.squeeze()
+        # import pdb;pdb.set_trace()
+        return nn_input
 
 if __name__ == "__main__":
     model = CostModelEfficientNet(8, 1)

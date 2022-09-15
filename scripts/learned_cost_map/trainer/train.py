@@ -6,7 +6,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostModelEfficientNet, CostFourierVelModelEfficientNet, CostFourierVelModelSmall, CostFourierVelModelRGB, EnsembleCostFourierVelModel
+from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostModelEfficientNet, CostFourierVelModelEfficientNet, CostFourierVelModelSmall, CostFourierVelModelRGB, EnsembleCostFourierVelModel, BaselineGeometricModel, BaselineVisualGeometricModel, BaselineGeometricLargeModel, BaselineVisualGeometricLargeModel
 
 from learned_cost_map.trainer.utils import get_dataloaders, get_balanced_dataloaders, preprocess_data, avg_dict, get_FFM_freqs, get_wanda_dataloaders, get_balanced_wanda_dataloaders
 
@@ -164,6 +164,14 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
             fourier_freqs = torch.load(saved_freqs)
         else:
             fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=num_freqs)
+    elif model_name=="BaselineGeometricModel":
+        model = BaselineGeometricModel()
+    elif model_name=="BaselineVisualGeometricModel":
+        model = BaselineVisualGeometricModel()
+    elif model_name=="BaselineGeometricLargeModel":
+        model = BaselineGeometricLargeModel
+    elif model_name=="BaselineVisualGeometricLargeModel":
+        model = BaselineVisualGeometricLargeModel
     else:
         raise NotImplementedError()
     
@@ -255,7 +263,7 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', choices=['CostModel', 'CostVelModel', 'CostFourierVelModel', 'CostModelEfficientNet', 'CostFourierVelModelEfficientNet', 'CostFourierVelModelSmall', 'CostFourierVelModelRGB', 'EnsembleCostFourierVelModel'], default='CostModel')
+    parser.add_argument('--model', choices=['CostModel', 'CostVelModel', 'CostFourierVelModel', 'CostModelEfficientNet', 'CostFourierVelModelEfficientNet', 'CostFourierVelModelSmall', 'CostFourierVelModelRGB', 'EnsembleCostFourierVelModel', 'BaselineGeometricModel', 'BaselineVisualGeometricModel', 'BaselineGeometricLargeModel', 'BaselineVisualGeometricLargeModel'], default='CostModel')
     parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
     parser.add_argument('--train_split', type=str, help='Path to the file that contains the training split text file.')
     parser.add_argument('--val_split', type=str, help='Path to the file that contains the validation split text file.')
@@ -271,7 +279,7 @@ if __name__ == '__main__':
     parser.add_argument("-b", "--batch_size", type=int, default=16, help="Batch size for training.")
     parser.add_argument("--embedding_size", type=int, default=512, help="Embedding size of map features after pasing through CNN backbone.")
     parser.add_argument("--mlp_size", type=int, default=512, help="Number of units per layer of the MLP that processes velocity")
-    parser.add_argument("num_freqs", type=int, default=16, help="Number of Fourier frequencies used in Fourier parameterization (m in the paper). Will result in 2*m features.")
+    parser.add_argument("--num_freqs", type=int, default=16, help="Number of Fourier frequencies used in Fourier parameterization (m in the paper). Will result in 2*m features.")
     parser.add_argument("--seq_length", type=int, default=1, help="Length of sequence used for training. See TartanDriveDataset for more details.")
     parser.add_argument('--grad_clip', type=float, help='Max norm of gradients. Leave blank for no grad clipping')
     parser.add_argument('-lr', '--learning_rate', type=float, default=1e-3, help='Initial learning rate.')
