@@ -13,13 +13,19 @@ BASE_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/train
 
 # Variables for trainer
 PY_TRAIN=train.py
-DATA_DIR=/project/learningphysics/tartancost_data
+# DATA_DIR=/project/learningphysics/tartancost_data
+DATA_DIR=/project/learningphysics/tartancost_data_2022
 # TRAIN_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/train_uniform.txt
 # VAL_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/val_uniform.txt
-TRAIN_LC_DIR=lowcost_5k
-TRAIN_HC_DIR=highcost_10k
-VAL_LC_DIR=lowcost_val_1k
-VAL_HC_DIR=highcost_val_2k
+# ICRA params below:
+# TRAIN_LC_DIR=lowcost_5k
+# TRAIN_HC_DIR=highcost_10k
+# VAL_LC_DIR=lowcost_val_1k
+# VAL_HC_DIR=highcost_val_2k
+TRAIN_LC_DIR=lowcost_merged
+TRAIN_HC_DIR=highcost_merged
+VAL_LC_DIR=lowcost_val_merged
+VAL_HC_DIR=highcost_val_merged
 MODEL=CostFourierVelModel
 FOURIER_SCALE=10.0
 NUM_EPOCHS=50
@@ -35,7 +41,7 @@ EMBEDDING_SIZE=512
 MLP_SIZE=512
 NUM_FREQS=8
 # RUN_NAME=train_${MODEL}_lr_3e-4_g_99e-1_bal_aug_l2_scale_${FOURIER_SCALE}_3
-RUN_NAME=train_${MODEL}_MLP_${MLP_SIZE}_freqs_${NUM_FREQS}_0
+RUN_NAME=train_${MODEL}_MLP_${MLP_SIZE}_freqs_${NUM_FREQS}_moredata_0
 MODELS_DIR=/data/datasets/mguamanc/learned_cost_map/models
 MAP_CONFIG=/data/datasets/mguamanc/learned_cost_map/configs/map_params.yaml
 
