@@ -210,10 +210,18 @@ class BalancedTartanDrive(Dataset):
 
         idx = all_data_elem[0]
 
-        # Format the index into the right string
-        sample["cmd"] = self.cmds[idx]
-        sample["cost"] = self.costs[idx]
-        sample["odom"] = self.odoms[idx]
+        # # Format the index into the right string
+        # sample["cmd"] = self.cmds[idx]
+        # sample["cost"] = self.costs[idx]
+        # sample["odom"] = self.odoms[idx]
+
+        # Change to take into account new directory structure for combination of 2021 and 2022 data
+        cmd_dir = ""
+        sample["cost"] = np.array([0, 0]) # TODO need to actually extract this data.
+        cost_dir = os.path.join(self.data_dir, "cost", f"{idx:06}.npy")
+        sample["cost"] = np.load(cost_dir)
+        odom_dir = os.path.join(self.data_dir, "odom", f"{idx:06}.npy")
+        sample["odom"] = np.load(odom_dir)
 
         # Load images
         imgc_dir = os.path.join(self.data_dir, "image_left_color", f"{idx:06}.png")
