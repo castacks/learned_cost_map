@@ -172,8 +172,8 @@ class BalancedTartanDrive(Dataset):
         # self.costs_hc = np.load(costs_dir_hc)
         # self.odoms_hc = np.load(odoms_dir_hc)
 
-        self.N_lc = len([name for name in os.listdir(os.path.join(self.data_dir_lc, "rgb_map")) if os.path.isfile(name)])
-        self.N_hc = len([name for name in os.listdir(os.path.join(self.data_dir_hc, "rgb_map")) if os.path.isfile(name)])
+        self.N_lc = len([name for name in os.listdir(os.path.join(self.data_dir_lc, "rgb_map")) if name.endswith(".npy")])
+        self.N_hc = len([name for name in os.listdir(os.path.join(self.data_dir_hc, "rgb_map")) if name.endswith(".npy")])
 
         # self.N_lc = self.odoms_lc.shape[0]
         # self.N_hc = self.odoms_hc.shape[0]
