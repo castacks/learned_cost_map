@@ -156,21 +156,21 @@ class BalancedTartanDrive(Dataset):
         self.map_metadata = map_metadata
         self.crop_params = crop_params
 
-        cmds_dir_lc = os.path.join(self.data_dir_lc, "cmds.npy")
-        costs_dir_lc = os.path.join(self.data_dir_lc, "costs.npy")
-        odoms_dir_lc = os.path.join(self.data_dir_lc, "odoms.npy")
+        # cmds_dir_lc = os.path.join(self.data_dir_lc, "cmds.npy")
+        # costs_dir_lc = os.path.join(self.data_dir_lc, "costs.npy")
+        # odoms_dir_lc = os.path.join(self.data_dir_lc, "odoms.npy")
 
-        self.cmds_lc = np.load(cmds_dir_lc)
-        self.costs_lc = np.load(costs_dir_lc)
-        self.odoms_lc = np.load(odoms_dir_lc)
+        # self.cmds_lc = np.load(cmds_dir_lc)
+        # self.costs_lc = np.load(costs_dir_lc)
+        # self.odoms_lc = np.load(odoms_dir_lc)
 
-        cmds_dir_hc = os.path.join(self.data_dir_hc, "cmds.npy")
-        costs_dir_hc = os.path.join(self.data_dir_hc, "costs.npy")
-        odoms_dir_hc = os.path.join(self.data_dir_hc, "odoms.npy")
+        # cmds_dir_hc = os.path.join(self.data_dir_hc, "cmds.npy")
+        # costs_dir_hc = os.path.join(self.data_dir_hc, "costs.npy")
+        # odoms_dir_hc = os.path.join(self.data_dir_hc, "odoms.npy")
 
-        self.cmds_hc = np.load(cmds_dir_hc)
-        self.costs_hc = np.load(costs_dir_hc)
-        self.odoms_hc = np.load(odoms_dir_hc)
+        # self.cmds_hc = np.load(cmds_dir_hc)
+        # self.costs_hc = np.load(costs_dir_hc)
+        # self.odoms_hc = np.load(odoms_dir_hc)
 
         self.N_lc = self.odoms_lc.shape[0]
         self.N_hc = self.odoms_hc.shape[0]
@@ -198,15 +198,15 @@ class BalancedTartanDrive(Dataset):
         if all_data_elem[1] == 0:
             # Low cost
             self.data_dir = self.data_dir_lc
-            self.cmds = self.cmds_lc
-            self.costs = self.costs_lc
-            self.odoms = self.odoms_lc
+            # self.cmds = self.cmds_lc
+            # self.costs = self.costs_lc
+            # self.odoms = self.odoms_lc
         else:
             # High cost
             self.data_dir = self.data_dir_hc
-            self.cmds = self.cmds_hc
-            self.costs = self.costs_hc
-            self.odoms = self.odoms_hc
+            # self.cmds = self.cmds_hc
+            # self.costs = self.costs_hc
+            # self.odoms = self.odoms_hc
 
         idx = all_data_elem[0]
 
