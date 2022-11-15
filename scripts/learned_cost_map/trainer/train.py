@@ -169,9 +169,9 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
     elif model_name=="BaselineVisualGeometricModel":
         model = BaselineVisualGeometricModel()
     elif model_name=="BaselineGeometricLargeModel":
-        model = BaselineGeometricLargeModel
+        model = BaselineGeometricLargeModel()
     elif model_name=="BaselineVisualGeometricLargeModel":
-        model = BaselineVisualGeometricLargeModel
+        model = BaselineVisualGeometricLargeModel()
     else:
         raise NotImplementedError()
     
