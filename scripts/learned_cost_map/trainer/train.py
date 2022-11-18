@@ -63,6 +63,7 @@ def run_train_epoch(model, model_name, train_loader, optimizer, scheduler, grad_
         if grad_clip:
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
         optimizer.step()
+        data_dict = None ## This might help with script taking too much memory
     scheduler.step()
     return avg_dict(all_metrics)
 
@@ -78,7 +79,7 @@ def get_val_metrics(model, model_name, val_loader, fourier_freqs=None):
             else:
                 loss, _metric = traversability_cost_loss(model, x, y)
             all_metrics.append(_metric)
-
+            data_dict = None ## This might help with script taking too much memory
     return avg_dict(all_metrics)
 
 
