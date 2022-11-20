@@ -12,9 +12,9 @@ BASE_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/data_
 
 PY_SCRIPT=cost_labeler.py
 
-DATA_DIR=/project/learningphysics/20220628_traj
+DATA_DIR=/project/learningphysics/arl_20220922_traj
 
-COSTSTATS_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/ros/cost_statistics.yaml
+COSTSTATS_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/ros/arl_cost_statistics.yaml
 
 
 # Install learned_cost_map package
