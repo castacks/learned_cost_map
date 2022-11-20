@@ -143,50 +143,43 @@ def cost_function(data, sensor_freq, cost_name, freq_range=None, num_bins=None):
 
 
 
-def main(data_dir1, data_dir2, output_dir):
-    # dataset_dir = '/home/mateo/Data/SARA/TartanCost'
-    # trajectories_dir = os.path.join(dataset_dir, "Trajectories")
-    # annotations_dir  = os.path.join(dataset_dir, "Annotations")
-    # dir_names = sorted(os.listdir(trajectories_dir))
-
-    data_dirs = [data_dir1, data_dir2]
-    dir_names = [sorted(os.listdir(d)) for d in data_dirs]
-    # dir_names =sorted(os.listdir(data_dir))
-
+def main(data_dir, output_dir):
     all_costs = []
+
+    trajectories_dir = args.data_dir
+    traj_dirs = list(filter(os.path.isdir, [os.path.join(trajectories_dir,x) for x in sorted(os.listdir(trajectories_dir))]))
 
     # import pdb;pdb.set_trace()
 
-    for i, data_dir in enumerate(data_dirs):
-        for dir in dir_names[i]:
-            if "preview" in dir:
-                continue
-            print(f"Obtaining costs from directory: {os.path.join(data_dir, dir)}")
+    for i, dir in enumerate(traj_dirs):
+        if "preview" in dir:
+            continue
+        print(f"Obtaining costs from directory: {os.path.join(data_dir, dir)}")
 
-            ## Load IMU data
-            trajectory_dir = os.path.join(data_dir, dir)
-            imu_data = []
-            imu_freq = 125.0
-            imu_fp = os.path.join(trajectory_dir, "imu", "imu.npy")
-            imu_data = np.load(imu_fp)
+        ## Load IMU data
+        trajectory_dir = os.path.join(data_dir, dir)
+        imu_data = []
+        imu_freq = 125.0
+        imu_fp = os.path.join(trajectory_dir, "imu", "imu.npy")
+        imu_data = np.load(imu_fp)
 
-            # Set cost function parameters
-            cost_name = "freq_band_1_30"
-            min_freq = 1
-            max_freq = 30
-            freq_range=[min_freq, max_freq]
+        # Set cost function parameters
+        cost_name = "freq_band_1_30"
+        min_freq = 1
+        max_freq = 30
+        freq_range=[min_freq, max_freq]
 
-            ## Create Buffer for specific trajectory
-            window_length = 1  # This length is in seconds
-            window_num_points  = int(window_length * imu_freq)  # Number of points that will be stored in the buffer
-            pad_val = 9.81 # Value of linear acceleration in z axis when static
-            imu_buffer = Buffer(window_num_points, padded=True, pad_val=pad_val)
+        ## Create Buffer for specific trajectory
+        window_length = 1  # This length is in seconds
+        window_num_points  = int(window_length * imu_freq)  # Number of points that will be stored in the buffer
+        pad_val = 9.81 # Value of linear acceleration in z axis when static
+        imu_buffer = Buffer(window_num_points, padded=True, pad_val=pad_val)
 
-            print(f"IMU shape: {imu_data.shape}")
+        print(f"IMU shape: {imu_data.shape}")
 
-            for i in range(imu_data.shape[0]):
-                imu_buffer.insert(float(imu_data[i][-1:]))
-                all_costs.append(cost_function(imu_buffer.get_data(), imu_freq, cost_name, freq_range=freq_range))
+        for i in range(imu_data.shape[0]):
+            imu_buffer.insert(float(imu_data[i][-1:]))
+            all_costs.append(cost_function(imu_buffer.get_data(), imu_freq, cost_name, freq_range=freq_range))
 
     all_costs = np.array(all_costs)
     min_cost = float(np.min(all_costs))
@@ -203,7 +196,7 @@ def main(data_dir1, data_dir2, output_dir):
         }
     }
 
-    cost_statistics_fp =os.path.join(output_dir, 'wanda_cost_statistics.yaml')
+    cost_statistics_fp =os.path.join(output_dir, 'arl_cost_statistics.yaml')
     with open(cost_statistics_fp, 'w') as outfile:
         yaml.safe_dump(cost_functions, outfile, default_flow_style=False)
 
@@ -212,14 +205,12 @@ if __name__=="__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--data_dir1', type=str, required=True, help='Path to the directory that contains the first set of trajectories.')
-    parser.add_argument('--data_dir2', type=str, required=True, help='Path to the directory that contains the second set of trajectories.')
+    parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the first set of trajectories.')
     parser.add_argument('--output_dir', type=str, required=True, help='Path to the directory where the output stats file will be saved.')
 
     args = parser.parse_args()
 
-    data_dir_1 = args.data_dir1
-    data_dir_2 = args.data_dir2
+    data_dir = args.data_dir
     output_dir = args.output_dir
-    main(data_dir_1, data_dir_2, output_dir)
+    main(data_dir, output_dir)
 
