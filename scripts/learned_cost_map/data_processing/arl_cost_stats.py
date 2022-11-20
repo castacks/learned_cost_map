@@ -161,8 +161,10 @@ def main(data_dir, output_dir):
         imu_data = []
         imu_freq = 125.0
         imu_fp = os.path.join(trajectory_dir, "imu", "imu.npy")
-        imu_data = np.load(imu_fp)
-
+        try:
+            imu_data = np.load(imu_fp)
+        except:
+            continue
         # Set cost function parameters
         cost_name = "freq_band_1_30"
         min_freq = 1
