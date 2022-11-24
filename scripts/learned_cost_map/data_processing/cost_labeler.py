@@ -193,7 +193,10 @@ if __name__ == "__main__":
         ## Load IMU data
         imu_dir = os.path.join(d, "imu")
         imu_fp = os.path.join(imu_dir, "imu.npy")
-        imu_data = np.load(imu_fp)
+        try:
+            imu_data = np.load(imu_fp)
+        except:
+            continue
 
         ## Load IMU timestamps file
         imu_txt = os.path.join(imu_dir, "timestamps.txt")

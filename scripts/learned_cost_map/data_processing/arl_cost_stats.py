@@ -162,8 +162,10 @@ def main(data_dir, output_dir):
         imu_freq = 125.0
         imu_fp = os.path.join(trajectory_dir, "imu", "imu.npy")
         try:
+            print(f"Inside try clause for {imu_fp}")
             imu_data = np.load(imu_fp)
         except:
+            print(f"Entering exception. Could not load {imu_fp}")
             continue
         # Set cost function parameters
         cost_name = "freq_band_1_30"
