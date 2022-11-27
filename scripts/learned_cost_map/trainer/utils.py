@@ -231,9 +231,9 @@ def get_balanced_wanda_dataloaders(batch_size, data_root_dir, train_lc_dir, trai
     map_metadata = map_info["map_metadata"]
     crop_params = map_info["crop_params"]
 
-    train_set = BalancedWandaDataset(data_train_lc_dir, data_train_hc_dir, map_metadata, crop_params, balanced_data_transform, augment_data=augment_data, high_cost_prob=high_cost_prob)
+    train_set = BalancedWandaDataset(data_train_lc_dir, data_train_hc_dir, map_metadata, crop_params, balanced_wanda_transform, augment_data=augment_data, high_cost_prob=high_cost_prob)
 
-    val_set = BalancedWandaDataset(data_val_lc_dir, data_val_hc_dir, map_metadata, crop_params, balanced_data_transform, augment_data=False, high_cost_prob=high_cost_prob)
+    val_set = BalancedWandaDataset(data_val_lc_dir, data_val_hc_dir, map_metadata, crop_params, balanced_wanda_transform, augment_data=False, high_cost_prob=high_cost_prob)
 
     if use_multi_epochs_loader:
         loader_class = MultiEpochsDataLoader
