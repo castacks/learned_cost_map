@@ -226,7 +226,7 @@ class BalancedWandaDataset(Dataset):
         sample["odom"] = np.load(odom_dir)[0]
 
         # Load images
-        imgc_dir = os.path.join(self.data_dir, "image_left_color", f"{idx:06}.png")
+        imgc_dir = os.path.join(self.data_dir, "image_left", f"{idx:06}.png")
         heightmap_dir = os.path.join(self.data_dir, "height_map", f"{idx:06}.npy")
         rgbmap_dir = os.path.join(self.data_dir, "rgb_map", f"{idx:06}.npy")
 
