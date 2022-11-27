@@ -18,7 +18,7 @@ def balanced_wanda_transform(sample, augment_data=False):
     # Transform left_img=img0, right_img=img1, color_img=imgc, disparity image=disp0
     # Convert to Tensor
     # Transform to pytorch tensors, make sure they are all in CxHxW configuration
-    if "imgc" in sample:
+    if ("imgc" in sample) and (sample["imgc"] is not None):
         img_transform = T.Compose([
             T.ToTensor(),
             T.Normalize(mean=[0.485, 0.456, 0.406],
