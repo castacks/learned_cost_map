@@ -31,7 +31,7 @@ FOURIER_SCALE=10.0
 NUM_EPOCHS=50
 BATCH_SIZE=1024
 SEQ_LENGTH=1
-LEARNING_RATE=0.0003
+LEARNING_RATE=0.0001 #0.0003
 WEIGHT_DECAY=0.0000001
 GAMMA=0.99
 EVAL_INTERVAL=1
@@ -41,7 +41,7 @@ EMBEDDING_SIZE=512
 MLP_SIZE=512
 NUM_FREQS=8
 # RUN_NAME=train_${MODEL}_lr_3e-4_g_99e-1_bal_aug_l2_scale_${FOURIER_SCALE}_3
-RUN_NAME=train_warthog5_${MODEL}_MLP_${MLP_SIZE}_freqs_${NUM_FREQS}_0
+RUN_NAME=train_warthog5_${MODEL}_MLP_${MLP_SIZE}_lr_${LEARNING_RATE}_freqs_${NUM_FREQS}_0
 MODELS_DIR=/data/datasets/mguamanc/learned_cost_map/models
 MAP_CONFIG=/data/datasets/mguamanc/learned_cost_map/configs/map_params.yaml
 
