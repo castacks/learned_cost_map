@@ -13,7 +13,7 @@ BASE_DIR=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/train
 
 # Variables for trainer
 PY_TRAIN=train.py
-DATA_DIR=/project/learningphysics/tartancost_wanda
+DATA_DIR=/project/learningphysics/tartancost_arl_20220922
 # TRAIN_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/train_uniform.txt
 # VAL_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/val_uniform.txt
 TRAIN_LC_DIR=lowcost_2500
