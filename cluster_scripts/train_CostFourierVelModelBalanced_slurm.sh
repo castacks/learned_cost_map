@@ -2,7 +2,7 @@
 
 # SLURM Resource Parameters
 
-#SBATCH -N 1  # CPU Cores
+#SBATCH -N 5  # CPU Cores
 #SBATCH -t 1-00:00 # D-HH:MM
 #SBATCH -p dgx # cpu/gpu/dgx
 #SBATCH -w calculon 
