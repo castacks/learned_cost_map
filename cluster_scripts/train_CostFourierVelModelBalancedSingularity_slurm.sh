@@ -2,10 +2,9 @@
 
 # SLURM Resource Parameters
 
-#SBATCH -N 10  # CPU Cores
+#SBATCH -n 10  # CPU Cores
 #SBATCH -t 1-00:00 # D-HH:MM
-#SBATCH -p a100 # cpu/gpu/dgx
-#SBATCH -w a100-gpu-full 
+#SBATCH -p a100-gpu-full # cpu/gpu/dgx 
 #SBATCH --gres=gpu:1
 #SBATCH --mem=80G  # MB
 #SBATCH --job-name=train_CostFourierVelModel_balanced_singularity
@@ -21,8 +20,8 @@ WORKING_DIR=/data1/datasets/mguamanc/learned_cost_map/cluster_scripts
 EXE_SCRIPT=$WORKING_DIR/train_CostFourierVelModelBalancedSingularity.sh
 
 USER=mguamanc
+source /etc/profile.d/modules.sh
+SIF="${SINGULARITY_DIR}/sara.sif"
+S_EXEC="singularity exec -B /data1:/data1 --nv ${SIF}"
 
-cd $SINGULARITY_DIR
-singularity instance start --nv sara.sif sara
-singularity run --nv instance://sara
-$EXE $EXE_SCRIPT
+$S_EXEC $EXE $EXE_SCRIPT

@@ -12,7 +12,8 @@ PACKAGE_DIR=/data1/datasets/mguamanc/learned_cost_map
 BASE_DIR=/data1/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/trainer
 
 # Variables for trainer
-PY_TRAIN=train .py
+PY_TRAIN=train.py
+PY_TEST_PACKAGES=test_packages.py
 # DATA_DIR=/project/learningphysics/tartancost_data
 DATA_DIR=/project/learningphysics/tartancost_data_2022
 # TRAIN_SPLIT=/data/datasets/mguamanc/learned_cost_map/scripts/learned_cost_map/splits/train_uniform.txt
@@ -50,10 +51,11 @@ MAP_CONFIG=/data1/datasets/mguamanc/learned_cost_map/configs/map_params.yaml
 cd $PACKAGE_DIR
 sudo pip3 install -e .
 
+# sudo pip3 install wandb
 # Login to Weights and Biases
-wandb login b47938fa5bae1f5b435dfa32a2aa5552ceaad5c6
+# wandb login b47938fa5bae1f5b435dfa32a2aa5552ceaad5c6
 # export WANDB_MODE=offline
-wandb init -p SARA
+# wandb init -p SARA
 
 # # Run split script
 # ${EXE_PYTHON} $BASE_DIR/$PY_SPLIT \
@@ -63,7 +65,13 @@ wandb init -p SARA
 #     --all_val_fp $ALL_VAL_FP \
 #     --output_dir $OUTPUT_DIR
 
-echo Running standard split
+echo Verifying packages
+
+# Run test_packages
+
+${EXE_PYTHON} $BASE_DIR/$PY_TEST_PACKAGES
+
+echo Done verifying packages
 
 # Run trainer
 ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
