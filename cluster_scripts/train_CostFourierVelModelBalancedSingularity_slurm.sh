@@ -5,7 +5,7 @@
 #SBATCH -n 10  # CPU Cores
 #SBATCH -N 1
 #SBATCH -t 2-00:00 # D-HH:MM
-#SBATCH -p dgx1-gpu # cpu/gpu/dgx 
+#SBATCH -p a100-gpu-full # cpu/gpu/dgx 
 #SBATCH --gres=gpu:1
 #SBATCH --mem=32G  # MB
 #SBATCH --job-name=train_CostFourierVelModel_balanced_singularity
