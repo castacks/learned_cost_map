@@ -1,0 +1,10 @@
+#!/bin/bash
+# echo commands to stdout
+set -x
+# Create singularity container
+source /etc/profile.d/modules.sh
+SIF=/ocean/projects/cis220039p/guamanca/data/singularity/sara.sif
+S_EXEC="singularity exec -B /ocean:/ocean --nv ${SIF}"
+# Implement the job in the container
+YOUR_SCRIPT=/ocean/projects/cis220039p/guamanca/projects/learned_cost_map/cluster_scripts/train_psc.sh
+${S_EXEC} 'bash' ${YOUR_SCRIPT}
