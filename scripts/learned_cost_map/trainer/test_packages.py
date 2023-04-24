@@ -1,3 +1,7 @@
+# See what is in sys path
+import sys
+print(sys.path)
+
 # Test numpy
 print("Importing NumPy")
 try:

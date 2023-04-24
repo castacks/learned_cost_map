@@ -1,9 +1,19 @@
 from distutils.core import setup
-from catkin_pkg.python_setup import generate_distutils_setup
+# from catkin_pkg.python_setup import generate_distutils_setup
 
-d = generate_distutils_setup(
-  packages=['learned_cost_map', 'learned_cost_map.utils', 'learned_cost_map.trainer', 'learned_cost_map.terrain_utils', 'learned_cost_map.dataloader'],
-  package_dir={'': 'scripts'}
+# d = generate_distutils_setup(
+#   packages=['learned_cost_map', 'learned_cost_map.utils', 'learned_cost_map.trainer', 'learned_cost_map.terrain_utils', 'learned_cost_map.dataloader'],
+#   package_dir={'': 'scripts'}
+# )
+
+# setup(**d)
+
+
+
+setup(
+    name="learned_cost_map",
+    version=0.1,
+    packages=['learned_cost_map', 'learned_cost_map.utils', 'learned_cost_map.trainer', 'learned_cost_map.terrain_utils', 'learned_cost_map.dataloader'],
+    license="MIT",
+    package_dir={'': 'scripts'}
 )
-
-setup(**d)
