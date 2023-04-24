@@ -220,8 +220,9 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
         }
         print("Training configuration: ")
         print(config)
+        print("Setting up wandb init")
         wandb.init(project="SARA", reinit=True, config=config, settings=wandb.Settings(start_method='fork'))
-
+        print("Done setting up wandb init")
 
     for epoch in range(num_epochs):
         if not just_eval:
