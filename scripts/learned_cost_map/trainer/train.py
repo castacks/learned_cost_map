@@ -13,7 +13,7 @@ from learned_cost_map.trainer.utils import get_dataloaders, get_balanced_dataloa
 import wandb
 import time
 
-USE_WANDB = True
+USE_WANDB = False
 
 def traversability_cost_loss(model, input, labels, mean_cost=None):
     pred_cost = model(input)
@@ -222,7 +222,8 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
         print(config)
         print("Setting up wandb init")
         # wandb.init(project="SARA", reinit=True, config=config, settings=wandb.Settings(start_method='fork'))
-        wandb.init(project="SARA", config=config)
+        wandb.init(project="SARA", reinit=True, config=config, settings=wandb.Settings(start_method='thread'))
+        # wandb.init(project="SARA", config=config)
         print("Done setting up wandb init")
 
     for epoch in range(num_epochs):
