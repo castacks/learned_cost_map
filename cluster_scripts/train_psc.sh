@@ -49,9 +49,7 @@ MAP_CONFIG=/ocean/projects/cis220039p/guamanca/projects/learned_cost_map/configs
 
 # Install learned_cost_map package
 cd $PACKAGE_DIR
-# pip3 install -v -e $PACKAGE_DIR
 python3 -m pip install -e $PACKAGE_DIR
-# pip install -v -e $PACKAGE_DIR
 
 echo Checking python version after installing this package with pip3 
 which python3
@@ -60,7 +58,7 @@ echo Done checking python version
 
 # sudo pip3 install wandb
 # Login to Weights and Biases
-# wandb login b47938fa5bae1f5b435dfa32a2aa5552ceaad5c6
+wandb login b47938fa5bae1f5b435dfa32a2aa5552ceaad5c6
 # export WANDB_MODE=offline
 # wandb init -p SARA
 
