@@ -49,7 +49,7 @@ MAP_CONFIG=/ocean/projects/cis220039p/guamanca/projects/learned_cost_map/scripts
 
 # Install learned_cost_map package
 cd $PACKAGE_DIR
-sudo pip3 install -e .
+pip3 install -e .
 
 # sudo pip3 install wandb
 # Login to Weights and Biases
