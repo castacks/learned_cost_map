@@ -49,8 +49,16 @@ MAP_CONFIG=/ocean/projects/cis220039p/guamanca/projects/learned_cost_map/scripts
 
 # Install learned_cost_map package
 cd $PACKAGE_DIR
-pip3 install -e .
-pip install -e .
+pip3 install -v -e $PACKAGE_DIR
+# pip install -v -e $PACKAGE_DIR
+
+echo Checking python version after installing this package with pip3 
+python --version
+echo Done checking python version
+echo Checking pip version
+which pip
+echo Checking pip3 version
+which pip3
 
 # sudo pip3 install wandb
 # Login to Weights and Biases
