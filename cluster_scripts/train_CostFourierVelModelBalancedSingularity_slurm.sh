@@ -15,18 +15,18 @@
 #SBATCH --mail-user=mguamanc@andrew.cmu.edu
 
 
-# # Executable
-# EXE=/bin/bash
-# SINGULARITY_DIR=/data1/datasets/mguamanc/singularity
-# WORKING_DIR=/data1/datasets/mguamanc/learned_cost_map/cluster_scripts
-# EXE_SCRIPT=$WORKING_DIR/train_CostFourierVelModelBalancedSingularity.sh
+# Executable
+EXE=/bin/bash
+SINGULARITY_DIR=/data1/datasets/mguamanc/singularity
+WORKING_DIR=/data1/datasets/mguamanc/learned_cost_map/cluster_scripts
+EXE_SCRIPT=$WORKING_DIR/train_CostFourierVelModelBalancedSingularity.sh
 
-# USER=mguamanc
-# source /etc/profile.d/modules.sh
-# SIF="${SINGULARITY_DIR}/sara.sif"
-# S_EXEC="singularity exec -B /data1:/data1 --nv ${SIF}"
+USER=mguamanc
+source /etc/profile.d/modules.sh
+SIF="${SINGULARITY_DIR}/sara.sif"
+S_EXEC="singularity exec -B /data1:/data1 --nv ${SIF}"
 
-# $S_EXEC $EXE_SCRIPT
+$S_EXEC $EXE_SCRIPT
 
 
-singularity exec --nv /data1/datasets/mguamanc/singularity sh /data1/datasets/mguamanc/learned_cost_map/cluster_scripts/train_CostFourierVelModelBalancedSingularity.sh
+# singularity exec --nv /data1/datasets/mguamanc/singularity sh /data1/datasets/mguamanc/learned_cost_map/cluster_scripts/train_CostFourierVelModelBalancedSingularity.sh
