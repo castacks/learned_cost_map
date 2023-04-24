@@ -29,9 +29,8 @@ except:
 
 # Test learned_cost_maps
 print("Importing learned_cost_maps")
-from learned_cost_maps.trainer.utils import *
 try:
-    from learned_cost_maps.trainer.utils import *
+    from learned_cost_map.trainer.utils import *
     print("Learned cost maps imported successfully")
 except:
     print("Could not import learned_cost_maps")
