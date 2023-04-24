@@ -1,6 +1,6 @@
 # See what is in sys path
 import sys
-print(sys.path)
+print(f"Printing sys.path: {sys.path}")
 
 # Test numpy
 print("Importing NumPy")
@@ -29,6 +29,7 @@ except:
 
 # Test learned_cost_maps
 print("Importing learned_cost_maps")
+from learned_cost_maps.trainer.utils import *
 try:
     from learned_cost_maps.trainer.utils import *
     print("Learned cost maps imported successfully")
