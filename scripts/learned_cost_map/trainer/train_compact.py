@@ -167,77 +167,55 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
 
 if __name__ == '__main__':
     print("Inside main function")
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model', choices=['CostFourierVelModel'], default='CostModel')
-    parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
-    parser.add_argument('--train_split', type=str, help='Path to the file that contains the training split text file.')
-    parser.add_argument('--val_split', type=str, help='Path to the file that contains the validation split text file.')
-    parser.add_argument('--models_dir', type=str, required=True, help='String for where all models will be saved.', default="models")
-    parser.add_argument('--log_dir', type=str, required=True, help='String for where the models for this run will be saved.')
-    parser.add_argument('--map_config', type=str, required=True, help='Path to YAML config file containing map parameters.')
-    parser.add_argument('--balanced_loader', action='store_true', help="Use the balanced dataloader implemented in TartanDriveBalancedDataset.")
-    parser.add_argument('--train_lc_dir', type=str, help='Name of directory where the low cost training set is located. Relative to data_dir. Only required if balanced_loader flag is present.')
-    parser.add_argument('--train_hc_dir', type=str, help='Name of directory where the high cost training set is located. Relative to data_dir. Only required if balanced_loader flag is present.')
-    parser.add_argument('--val_lc_dir', type=str, help='Name of directory where the low cost validation set is located. Relative to data_dir. Only required if balanced_loader flag is present.')
-    parser.add_argument('--val_hc_dir', type=str, help='Name of directory where the high cost validation set is located. Relative to data_dir. Only required if balanced_loader flag is present.')
-    parser.add_argument("-n", "--num_epochs", type=int, default=50, help="Number of epochs for training.")
-    parser.add_argument("-b", "--batch_size", type=int, default=16, help="Batch size for training.")
-    parser.add_argument("--embedding_size", type=int, default=512, help="Embedding size of map features after pasing through CNN backbone.")
-    parser.add_argument("--mlp_size", type=int, default=512, help="Number of units per layer of the MLP that processes velocity")
-    parser.add_argument("--num_freqs", type=int, default=16, help="Number of Fourier frequencies used in Fourier parameterization (m in the paper). Will result in 2*m features.")
-    parser.add_argument('--grad_clip', type=float, help='Max norm of gradients. Leave blank for no grad clipping')
-    parser.add_argument('-lr', '--learning_rate', type=float, default=1e-3, help='Initial learning rate.')
-    parser.add_argument('--gamma', type=float, default=1.0, help="Value by which learning rate will be decreased at every epoch.")
-    parser.add_argument('--weight_decay', type=float, default=0.0, help="L2 penalty (default is 0.0).")
-    parser.add_argument("--eval_interval", type=int, default=1, help="How often to evaluate on validation set.")
-    parser.add_argument("--save_interval", type=int, default=1, help="How often to save model.")
-    parser.add_argument("--num_workers", type=int, default=4, help="Number of workers for the DataLoader.")
-    parser.add_argument('--shuffle_train', action='store_true', help="Shuffle batches for training in the DataLoader.")
-    parser.add_argument('--shuffle_val', action='store_true', help="Shuffle batches for validation in the DataLoader.")
-    parser.add_argument('--pretrained', action='store_true', help="Use pretrained ResNet.")
-    parser.add_argument('--augment_data', action='store_true', help="Augment data.")
-    parser.add_argument('--high_cost_prob', type=float, help="Probability of high cost frames in data. If not set, defaults to None, and balanced data split.")
-    parser.add_argument('--fourier_scale', type=float, default=10.0, help="Scale for Fourier frequencies, only needed for CostFourierVel models. If not set, defaults to 10.0.")
 
-    parser.set_defaults(balanced_loader=False, shuffle_train=False, shuffle_val=False, pretrained=False, augment_data=False)
-    args = parser.parse_args()
-    print("Done with parser")
 
-    print(f"grad_clip is {args.grad_clip}")
-    print(f"learning rate is {args.learning_rate}")
-    print(f"pretrained is {args.pretrained}")
-    print(f"weight decay is {args.weight_decay}")
-    print(f"high_cost_prob is {args.high_cost_prob}")
+    model = "CostFourierVelModel"
+    models_dir = "/ocean/projects/cis220039p/guamanca/projects/learned_cost_map/models"
+    log_dir = "train_psc"
+    map_config = "/ocean/projects/cis220039p/guamanca/projects/learned_cost_map/configs/map_params.yaml"
+    num_epochs = 50
+    batch_size = 1024
+    embedding_size = 512
+    mlp_size = 512
+    num_freqs = 8
+    learning_rate = 0.0003
+    gamma = 0.99
+    weight_decay = 0.0000001
+    eval_interval = 1
+    save_interval = 1
+    data_dir = "/ocean/projects/cis220039p/shared/tartancost/tartancost_data_2022"
+    balanced_loader = True
+    train_lc_dir = "lowcost_merged"
+    train_hc_dir = "highcost_merged"
+    val_lc_dir = "lowcost_val_merged"
+    val_hc_dir = "highcost_val_merged"
+    num_workers = 1
+    augment_data = True
+    fourier_scale = 10.0
+
 
     # Run training loop
-    main(model_name=args.model,
-         models_dir=args.models_dir,
-         log_dir=args.log_dir, 
-         map_config=args.map_config,
-         num_epochs = args.num_epochs, 
-         batch_size = args.batch_size, 
-         embedding_size = args.embedding_size,
-         mlp_size = args.mlp_size,
-         num_freqs = args.num_freqs,
-         grad_clip=args.grad_clip, 
-         lr = args.learning_rate,
-         gamma=args.gamma,
-         weight_decay=args.weight_decay, 
-         eval_interval = args.eval_interval, 
-         save_interval=args.save_interval, 
-         data_root_dir=args.data_dir, 
-         train_split=args.train_split, 
-         val_split=args.val_split,
-         balanced_loader=args.balanced_loader,
-         train_lc_dir=args.train_lc_dir,
-         train_hc_dir=args.train_hc_dir,
-         val_lc_dir=args.val_lc_dir,
-         val_hc_dir=args.val_hc_dir,
-         num_workers=args.num_workers, 
-         shuffle_train=args.shuffle_train, 
-         shuffle_val=args.shuffle_val,
-         pretrained=args.pretrained,
-         augment_data=args.augment_data, 
-         high_cost_prob=args.high_cost_prob,
-         fourier_scale=args.fourier_scale,
+    main(model_name=model,
+         models_dir=models_dir,
+         log_dir=log_dir, 
+         map_config=map_config,
+         num_epochs = num_epochs, 
+         batch_size = batch_size, 
+         embedding_size = embedding_size,
+         mlp_size = mlp_size,
+         num_freqs = num_freqs, 
+         lr = learning_rate,
+         gamma = gamma,
+         weight_decay = weight_decay, 
+         eval_interval = eval_interval, 
+         save_interval = save_interval, 
+         data_root_dir = data_dir, 
+         balanced_loader = balanced_loader,
+         train_lc_dir = train_lc_dir,
+         train_hc_dir = train_hc_dir,
+         val_lc_dir = val_lc_dir,
+         val_hc_dir = val_hc_dir,
+         num_workers = num_workers, 
+         augment_data = augment_data, 
+         fourier_scale = fourier_scale,
          )
