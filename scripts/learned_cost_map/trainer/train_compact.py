@@ -125,6 +125,7 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
         # wandb.init(project="SARA", config=config)
         print("Done setting up wandb init")
 
+    print("Starting epochs loop")
     for epoch in range(num_epochs):
         if not just_eval:
             print(f"Training, epoch {epoch}")

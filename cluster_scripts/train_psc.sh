@@ -56,11 +56,11 @@ which python3
 python3 --version
 echo Done checking python version
 
-# python3 -m pip install wandb
+python3 -m pip install wandb --upgrade
 # Login to Weights and Biases
-# wandb login b47938fa5bae1f5b435dfa32a2aa5552ceaad5c6
-# export WANDB_MODE=offline
-# wandb init -p SARA
+wandb login b47938fa5bae1f5b435dfa32a2aa5552ceaad5c6
+export WANDB_MODE=offline
+wandb init -p SARA
 
 # # Run split script
 # ${EXE_PYTHON} $BASE_DIR/$PY_SPLIT \
