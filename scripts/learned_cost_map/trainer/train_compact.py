@@ -6,14 +6,14 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostModelEfficientNet, CostFourierVelModelEfficientNet, CostFourierVelModelSmall, CostFourierVelModelRGB, EnsembleCostFourierVelModel, BaselineGeometricModel, BaselineVisualGeometricModel, BaselineGeometricLargeModel, BaselineVisualGeometricLargeModel
-
-from learned_cost_map.trainer.utils import get_dataloaders, get_balanced_dataloaders, preprocess_data, avg_dict, get_FFM_freqs, get_wanda_dataloaders, get_balanced_wanda_dataloaders
+from learned_cost_map.trainer.model import CostFourierVelModel
+from learned_cost_map.trainer.utils import get_balanced_dataloaders, preprocess_data, avg_dict, get_FFM_freqs
 
 import wandb
 import time
 
-USE_WANDB = False
+USE_WANDB = True
+print("Start of trainer file!")
 
 def traversability_cost_loss(model, input, labels, mean_cost=None):
     pred_cost = model(input)
@@ -33,16 +33,6 @@ def traversability_cost_loss(model, input, labels, mean_cost=None):
         return_dict = OrderedDict(loss=loss, random_loss=random_loss, mean_loss=mean_loss)
     return loss, return_dict
 
-def ensemble_cost_loss(model, input, labels):
-    outputs = model(input)
-    criterion = nn.MSELoss()
-    losses = [criterion(outputs[k], labels) for k in range(len(outputs))]
-    total_loss = 0
-    for loss in losses:
-        total_loss += loss
-    avg_loss = total_loss/len(losses)
-
-    return total_loss, OrderedDict(total_loss=total_loss, avg_loss=avg_loss)
 
 def run_train_epoch(model, model_name, train_loader, optimizer, scheduler, grad_clip=None, fourier_freqs=None):
     model.train()
@@ -51,10 +41,7 @@ def run_train_epoch(model, model_name, train_loader, optimizer, scheduler, grad_
     for i, data_dict in enumerate(train_loader):
         print(f"Training batch {i}/{len(train_loader)}")
         input, labels = preprocess_data(data_dict, fourier_freqs)
-        if model_name == "EnsembleCostFourierVelModel":
-            loss, _metric = ensemble_cost_loss(model, input, labels)
-        else:
-            loss, _metric = traversability_cost_loss(model, input, labels)
+        loss, _metric = traversability_cost_loss(model, input, labels)
         _metric["lr"] = torch.Tensor([curr_lr])
         all_metrics.append(_metric)
         optimizer.zero_grad()
@@ -74,10 +61,7 @@ def get_val_metrics(model, model_name, val_loader, fourier_freqs=None):
         for i,data_dict in enumerate(val_loader):
             print(f"Validation batch {i}/{len(val_loader)}")
             x, y = preprocess_data(data_dict, fourier_freqs)
-            if model_name == "EnsembleCostFourierVelModel":
-                loss, _metric = ensemble_cost_loss(model, x, y)
-            else:
-                loss, _metric = traversability_cost_loss(model, x, y)
+            loss, _metric = traversability_cost_loss(model, x, y)
             all_metrics.append(_metric)
             data_dict = None ## This might help with script taking too much memory
     return avg_dict(all_metrics)
@@ -85,12 +69,7 @@ def get_val_metrics(model, model_name, val_loader, fourier_freqs=None):
 
 def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_size = 256, embedding_size = 512, mlp_size = 512, num_freqs=16, seq_length = 1, grad_clip = None, lr = 1e-3, gamma=1, weight_decay=0.0, eval_interval = 5, save_interval = 5, data_root_dir=None, train_split=None, val_split=None, balanced_loader=False, train_lc_dir=None, train_hc_dir=None, val_lc_dir=None, val_hc_dir=None, num_workers=4, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, high_cost_prob=None, fourier_scale=10.0, fine_tune=False, saved_model=None, saved_freqs=None, wanda=False, just_eval=False):
 
-    if (data_root_dir is None):
-        raise NotImplementedError()
-    if wanda:
-        print("\n=====\nROBOT IS WARTHOG\n=====\n")
-    else:
-        print("\n=====\nROBOT IS ATV\n=====\n")
+    print("\n=====\nROBOT IS ATV\n=====\n")
     ## Obtain DataLoaders
 
     with open(map_config, "r") as file:
@@ -100,91 +79,16 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
 
     print("Getting data loaders")
     time_data = time.time()
-    if balanced_loader and (not wanda):
-        print("Using ATV balanced loader")
-        assert ((train_lc_dir is not None) and (train_hc_dir is not None) and (val_lc_dir is not None) and (val_hc_dir is not None)), "balanced_loader needs train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir to NOT be None."
+    print("Using ATV balanced loader")
+    train_loader, val_loader = get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, map_config, augment_data=augment_data, high_cost_prob=high_cost_prob)
 
-        train_loader, val_loader = get_balanced_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, map_config, augment_data=augment_data, high_cost_prob=high_cost_prob)
-    elif wanda and (not balanced_loader):
-        print("Using Wanda loader")
-        assert ((train_split is not None) and (val_split is not None)), "Wanda dataloader needs train_split, val_split to NOT be None."
-        train_loader, val_loader = get_wanda_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, augment_data=augment_data, map_metadata=map_metadata, crop_params=crop_params)
-    elif wanda and balanced_loader:
-        print("Using Wanda balanced loader")
-        assert ((train_lc_dir is not None) and (train_hc_dir is not None) and (val_lc_dir is not None) and (val_hc_dir is not None)), "balanced_wanda_loader needs train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir to NOT be None."
-
-        train_loader, val_loader = get_balanced_wanda_dataloaders(batch_size, data_root_dir, train_lc_dir, train_hc_dir, val_lc_dir, val_hc_dir, map_config, augment_data=augment_data, high_cost_prob=high_cost_prob)
-        
-    else:
-        print("Using Yamaha loader")
-        assert ((train_split is not None) and (val_split is not None)), "Standard dataloader needs train_split, val_split to NOT be None."
-
-        train_loader, val_loader = get_dataloaders(batch_size, seq_length, data_root_dir, train_split, val_split, num_workers, shuffle_train, shuffle_val, map_config, augment_data=augment_data)
     print(f"Got data loaders. {time.time()-time_data}")
 
     ## Set up model
     fourier_freqs = None
-    if model_name=="CostModel":
-        model = CostModel(input_channels=8, output_size=1, pretrained=pretrained)
-    elif model_name=="CostVelModel":
-        model = CostVelModel(input_channels=8, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
-    elif model_name=="CostFourierVelModel":
-        model = CostFourierVelModel(input_channels=8, ff_size=num_freqs, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
-        if fine_tune or just_eval:
-            assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
-            fourier_freqs = torch.load(saved_freqs)
-        else:
-            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=num_freqs)
-    elif model_name=="CostModelEfficientNet":
-        model = CostModelEfficientNet(input_channels=8, output_size=1, pretrained=pretrained)
-    elif model_name=="CostFourierVelModelEfficientNet":
-        model = CostFourierVelModelEfficientNet(input_channels=8, ff_size=num_freqs, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
-        if fine_tune or just_eval:
-            assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
-            fourier_freqs = torch.load(saved_freqs)
-        else:
-            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=num_freqs)
-    elif model_name=="CostFourierVelModelSmall":
-        model = CostFourierVelModelSmall(input_channels=8, ff_size=num_freqs, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
-        if fine_tune or just_eval:
-            assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
-            fourier_freqs = torch.load(saved_freqs)
-        else:
-            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=num_freqs)
-    elif model_name=="CostFourierVelModelRGB":
-        model = CostFourierVelModelRGB(input_channels=3, ff_size=num_freqs, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
-        if fine_tune or just_eval:
-            assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
-            fourier_freqs = torch.load(saved_freqs)
-        else:
-            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=num_freqs)
-    elif model_name=="EnsembleCostFourierVelModel":
-        model = EnsembleCostFourierVelModel(input_channels=8, ff_size=num_freqs, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, num_heads=32, pretrained=pretrained)
-        if fine_tune or just_eval:
-            assert (saved_freqs is not None), "saved_freqs needs to be passed as input"
-            fourier_freqs = torch.load(saved_freqs)
-        else:
-            fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=num_freqs)
-    elif model_name=="BaselineGeometricModel":
-        model = BaselineGeometricModel()
-    elif model_name=="BaselineVisualGeometricModel":
-        model = BaselineVisualGeometricModel()
-    elif model_name=="BaselineGeometricLargeModel":
-        model = BaselineGeometricLargeModel()
-    elif model_name=="BaselineVisualGeometricLargeModel":
-        model = BaselineVisualGeometricLargeModel()
-    else:
-        raise NotImplementedError()
-    
-    if fine_tune or just_eval:
-        assert (saved_model is not None), "saved_model needs to be passed as input"
-        print(f"Loading the following model: {saved_model}")
-        model.load_state_dict(torch.load(saved_model))
-        print("Pre-trained model successfully loaded!")
+    model = CostFourierVelModel(input_channels=8, ff_size=num_freqs, embedding_size=embedding_size, mlp_size=mlp_size, output_size=1, pretrained=pretrained)
 
-    if multiple_gpus and torch.cuda.device_count() > 1:
-        print("Using up to ", torch.cuda.device_count(), "GPUs!")
-        model = nn.DataParallel(model)
+    fourier_freqs = get_FFM_freqs(1, scale=fourier_scale, num_features=num_freqs)
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma)
@@ -212,17 +116,12 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
             'augment_data': augment_data,
             'high_cost_prob': high_cost_prob,
             'fourier_scale': fourier_scale,
-            'fine_tune': fine_tune,
-            'saved_model': saved_model,
-            'saved_freqs': saved_freqs,
-            'wanda': wanda,
-            'just_eval': just_eval
         }
         print("Training configuration: ")
         print(config)
         print("Setting up wandb init")
-        # wandb.init(project="SARA", reinit=True, config=config, settings=wandb.Settings(start_method='fork'))
-        wandb.init(project="SARA", reinit=True, config=config, settings=wandb.Settings(start_method='thread'))
+        wandb.init(project="SARA", reinit=True, config=config, settings=wandb.Settings(start_method='fork'))
+        # wandb.init(project="SARA", reinit=True, config=config, settings=wandb.Settings(start_method='thread'))
         # wandb.init(project="SARA", config=config)
         print("Done setting up wandb init")
 
@@ -266,8 +165,9 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
 
 
 if __name__ == '__main__':
+    print("Inside main function")
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', choices=['CostModel', 'CostVelModel', 'CostFourierVelModel', 'CostModelEfficientNet', 'CostFourierVelModelEfficientNet', 'CostFourierVelModelSmall', 'CostFourierVelModelRGB', 'EnsembleCostFourierVelModel', 'BaselineGeometricModel', 'BaselineVisualGeometricModel', 'BaselineGeometricLargeModel', 'BaselineVisualGeometricLargeModel'], default='CostModel')
+    parser.add_argument('--model', choices=['CostFourierVelModel'], default='CostModel')
     parser.add_argument('--data_dir', type=str, required=True, help='Path to the directory that contains the data split up into trajectories.')
     parser.add_argument('--train_split', type=str, help='Path to the file that contains the training split text file.')
     parser.add_argument('--val_split', type=str, help='Path to the file that contains the validation split text file.')
@@ -284,7 +184,6 @@ if __name__ == '__main__':
     parser.add_argument("--embedding_size", type=int, default=512, help="Embedding size of map features after pasing through CNN backbone.")
     parser.add_argument("--mlp_size", type=int, default=512, help="Number of units per layer of the MLP that processes velocity")
     parser.add_argument("--num_freqs", type=int, default=16, help="Number of Fourier frequencies used in Fourier parameterization (m in the paper). Will result in 2*m features.")
-    parser.add_argument("--seq_length", type=int, default=1, help="Length of sequence used for training. See TartanDriveDataset for more details.")
     parser.add_argument('--grad_clip', type=float, help='Max norm of gradients. Leave blank for no grad clipping')
     parser.add_argument('-lr', '--learning_rate', type=float, default=1e-3, help='Initial learning rate.')
     parser.add_argument('--gamma', type=float, default=1.0, help="Value by which learning rate will be decreased at every epoch.")
@@ -294,31 +193,21 @@ if __name__ == '__main__':
     parser.add_argument("--num_workers", type=int, default=4, help="Number of workers for the DataLoader.")
     parser.add_argument('--shuffle_train', action='store_true', help="Shuffle batches for training in the DataLoader.")
     parser.add_argument('--shuffle_val', action='store_true', help="Shuffle batches for validation in the DataLoader.")
-    parser.add_argument('--multiple_gpus', action='store_true', help="Use multiple GPUs if they are available.")
     parser.add_argument('--pretrained', action='store_true', help="Use pretrained ResNet.")
     parser.add_argument('--augment_data', action='store_true', help="Augment data.")
     parser.add_argument('--high_cost_prob', type=float, help="Probability of high cost frames in data. If not set, defaults to None, and balanced data split.")
     parser.add_argument('--fourier_scale', type=float, default=10.0, help="Scale for Fourier frequencies, only needed for CostFourierVel models. If not set, defaults to 10.0.")
-    parser.add_argument('--fine_tune', action='store_true', help="Augment data.")
-    parser.add_argument('--saved_model', type=str, help='String for where the saved model that will be used for fine tuning is located.')
-    parser.add_argument('--saved_freqs', type=str, help='String for where the saved Fourier frequencies that will be used for fine tuning are located.')
-    parser.add_argument('--wanda', action='store_true', help="Train or fine-tune using data from Wanda robot.")
-    parser.add_argument('--just_eval', action='store_true', help="Just evaluate a model on a dataset without training.")
 
-    parser.set_defaults(balanced_loader=False, shuffle_train=False, shuffle_val=False, multiple_gpus=False, pretrained=False, augment_data=False, fine_tune=False, wanda=False, just_eval=False)
+    parser.set_defaults(balanced_loader=False, shuffle_train=False, shuffle_val=False, pretrained=False, augment_data=False)
     args = parser.parse_args()
+    print("Done with parser")
 
     print(f"grad_clip is {args.grad_clip}")
     print(f"learning rate is {args.learning_rate}")
     print(f"pretrained is {args.pretrained}")
     print(f"weight decay is {args.weight_decay}")
     print(f"high_cost_prob is {args.high_cost_prob}")
-    print(f"fine_tune is {args.fine_tune}")
-    print(f"saved_model is {args.saved_model}")
-    print(f"wanda is {args.wanda}")
-    print(f"just_eval is {args.just_eval}")
 
-    
     # Run training loop
     main(model_name=args.model,
          models_dir=args.models_dir,
@@ -329,7 +218,6 @@ if __name__ == '__main__':
          embedding_size = args.embedding_size,
          mlp_size = args.mlp_size,
          num_freqs = args.num_freqs,
-         seq_length = args.seq_length, 
          grad_clip=args.grad_clip, 
          lr = args.learning_rate,
          gamma=args.gamma,
@@ -347,14 +235,8 @@ if __name__ == '__main__':
          num_workers=args.num_workers, 
          shuffle_train=args.shuffle_train, 
          shuffle_val=args.shuffle_val,
-         multiple_gpus=args.multiple_gpus,
          pretrained=args.pretrained,
          augment_data=args.augment_data, 
          high_cost_prob=args.high_cost_prob,
          fourier_scale=args.fourier_scale,
-         fine_tune=args.fine_tune,
-         saved_model=args.saved_model,
-         saved_freqs=args.saved_freqs,
-         wanda=args.wanda,
-         just_eval=args.just_eval
          )

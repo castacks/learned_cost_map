@@ -78,8 +78,8 @@ ${EXE_PYTHON} $BASE_DIR/$PY_TEST_PACKAGES
 
 echo Done verifying packages
 
-# Run trainer
-${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
+echo Running compact train script
+${EXE_PYTHON} $BASE_DIR/train_compact.py \
     --model $MODEL \
     --data_dir $DATA_DIR \
     --models_dir $MODELS_DIR \
@@ -101,9 +101,35 @@ ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
     --eval_interval $EVAL_INTERVAL \
     --save_interval $SAVE_INTERVAL \
     --num_workers $NUM_WORKERS\
-    --multiple_gpus \
     --augment_data \
     --fourier_scale $FOURIER_SCALE
-    # --pretrained
+
+# Run trainer
+# ${EXE_PYTHON} $BASE_DIR/$PY_TRAIN \
+#     --model $MODEL \
+#     --data_dir $DATA_DIR \
+#     --models_dir $MODELS_DIR \
+#     --log_dir $RUN_NAME \
+#     --map_config $MAP_CONFIG \
+#     --balanced_loader \
+#     --train_lc_dir $TRAIN_LC_DIR \
+#     --train_hc_dir $TRAIN_HC_DIR \
+#     --val_lc_dir $VAL_LC_DIR \
+#     --val_hc_dir $VAL_HC_DIR \
+#     --num_epochs $NUM_EPOCHS \
+#     --batch_size $BATCH_SIZE \
+#     --embedding_size $EMBEDDING_SIZE \
+#     --mlp_size $MLP_SIZE \
+#     --num_freqs $NUM_FREQS \
+#     -lr $LEARNING_RATE \
+#     --gamma $GAMMA \
+#     --weight_decay $WEIGHT_DECAY \
+#     --eval_interval $EVAL_INTERVAL \
+#     --save_interval $SAVE_INTERVAL \
+#     --num_workers $NUM_WORKERS\
+#     --multiple_gpus \
+#     --augment_data \
+#     --fourier_scale $FOURIER_SCALE
+#     # --pretrained
 
 echo Training CostFourierVelModel network shell script ends.
