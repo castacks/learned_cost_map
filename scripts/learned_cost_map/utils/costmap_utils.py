@@ -116,7 +116,24 @@ def process_invalid_patches(patches, thresh=0.5):
 
     return invalid_flags
 
-def produce_costmap(model, maps, map_metadata, crop_params, costmap_batch_size=256, costmap_stride=20, vel=None, fourier_freqs=None):
+def process_invalid_patches_twohead(patches, thresh=0.5):
+    '''Takes in a tensor of patches and returns a tensor of ones and zeros, with ones signaling an invalid patch so that the cost can be set appropriately.
+
+    Args:
+        - patches:
+            Tensor of shape [B, C, H, W]
+    
+    Returns:    
+        - invalid:
+            Tensor of shape [B]
+    '''
+    invalid_channels = 1-patches[:, -1, :, :]
+    invalid_vals = torch.sum(invalid_channels, dim=(1,2))/(patches.shape[-2]*patches.shape[-1])
+    invalid_flags = invalid_vals > thresh
+
+    return invalid_flags
+
+def produce_costmap(model, maps, map_metadata, crop_params, costmap_batch_size=256, costmap_stride=20, vel=None, fourier_freqs=None, invalid_cost=None, vel_x=None, yaw=None, model_name=None):
     '''Returns a costmap using a trained model from a maps dict.
 
     Args:
@@ -146,13 +163,21 @@ def produce_costmap(model, maps, map_metadata, crop_params, costmap_batch_size=2
             Float of unnormalized velocity at which we want to query the costmap. If name of the model is not CostVelModel or CostFourierVelModel, this should be None.
         - fourier_freqs:
             Tensor of fourier frequencies used in the CostFourierVelModel. If the name of the model is different, this should be None.
+        - invalid_cost:
+            Float of cost to use for unknown regions (patches with over 50% of unknown pixels). Usually 0.5 or 1 (Range is 0-1)
+        - vel_x:
+            Float of unnormalized velocity in the x axis at which we want to query the costmap. Used with the TwoHeaCostResNet model.
+        - yaw:
+            Float of yaw to query the costmap with. Used with the TwoHeadCostResNet model.
+        - model_name:
+            String of model being used. If using TwoHeadCostResNet model, ti will change the way invalid patches are handled
             
     Returns:
         - costmap:
             Tensor of dimensions as given by the map_metadata: (height/resolution, width/resolution) containing inferred costmap from learned model.
     '''
 
-    print(f"costmap_batch_size: {costmap_batch_size}, costmap_stride: {costmap_stride}")
+    # print(f"costmap_batch_size: {costmap_batch_size}, costmap_stride: {costmap_stride}")
     # import pdb;pdb.set_trace()
     device = "cuda" # "cuda" if torch.cuda.is_available() else "cpu"
     tm = TerrainMap(maps=maps, map_metadata=map_metadata, device=device)
@@ -165,7 +190,7 @@ def produce_costmap(model, maps, map_metadata, crop_params, costmap_batch_size=2
     y_pixels = torch.arange(0, map_width, costmap_stride)
     x_poses = x_pixels*map_metadata['resolution']+map_metadata["origin"][0]
     y_poses = y_pixels*map_metadata['resolution']+map_metadata["origin"][1]
-    all_poses = torch.stack(torch.meshgrid(x_poses, y_poses, indexing="ij"), dim=-1).view(-1, 2)
+    all_poses = torch.stack(torch.meshgrid(x_poses, y_poses), dim=-1).view(-1, 2)
     # Append orientations
     all_poses = torch.cat([all_poses, torch.zeros(all_poses.shape[0], 1)], dim=-1).to(device).detach()
 
@@ -184,7 +209,10 @@ def produce_costmap(model, maps, map_metadata, crop_params, costmap_batch_size=2
         # import pdb;pdb.set_trace()
         patches = tm.get_crop_batch(poses=all_poses[batch_starts[b]:batch_ends[b]], crop_params=crop_params)
         # print(f"Shape of patches: {patches.shape}")
-        invalid_flags = process_invalid_patches(patches, thresh=0.5)
+        if model_name == "TwoHeadCostResNet":
+            invalid_flags = process_invalid_patches_twohead(patches, thresh=0.5)
+        else:
+            invalid_flags = process_invalid_patches(patches, thresh=0.5)
         # rgb_maps, height_maps = patches_to_imgs(patches)
         # front_img_ax.clear() 
         # front_img_ax.imshow(rgb_maps[0])
@@ -199,6 +227,18 @@ def produce_costmap(model, maps, map_metadata, crop_params, costmap_batch_size=2
             vels_vec = (torch.ones(patches.shape[0], 1) * vel/20.0).cuda()
         else:
             vels_vec = None
+        if vel_x is not None:
+            vels_x_vec = (torch.ones(patches.shape[0], 1) * vel_x/5.0).cuda()
+        else:
+            vels_x_vec = None
+        if yaw is not None:
+            yaw_vec = (torch.ones(patches.shape[0], 1) * yaw).cuda()
+        else:
+            yaw_vec = None
+        if (yaw is not None) and (vel_x is not None):
+            vel_x_yaw_vec = torch.cat([vels_x_vec, yaw_vec], dim=1)
+        else:
+            vel_x_yaw_vec = None
         if fourier_freqs is not None:
             fourier_freqs = fourier_freqs.cuda()
             fourier_vels = (FourierFeatureMapping(vels_vec, fourier_freqs)).cuda()
@@ -206,9 +246,12 @@ def produce_costmap(model, maps, map_metadata, crop_params, costmap_batch_size=2
             fourier_vels = None
         input_data['vels'] = vels_vec
         input_data['fourier_vels'] = fourier_vels
+        input_data['vel_x'] = vels_x_vec
+        input_data['yaw'] = yaw_vec
+        input_data['vel_x_yaw'] = vel_x_yaw_vec
         costs = model(input_data).detach()
-        costs[invalid_flags] = 0.5 # TODO Uncomment this line if you want to set high costs to invalid areas
-        # import pdb;pdb.set_trace()
+        if invalid_cost is not None:
+            costs[invalid_flags] = invalid_cost 
         if len(costs.shape) > 1:
             costs = costs.squeeze()
         if len(costs.shape) < 1:
@@ -279,7 +322,7 @@ def produce_ensemble_costmap(model, maps, map_metadata, crop_params, costmap_bat
     y_pixels = torch.arange(0, map_width, costmap_stride)
     x_poses = x_pixels*map_metadata['resolution']+map_metadata["origin"][0]
     y_poses = y_pixels*map_metadata['resolution']+map_metadata["origin"][1]
-    all_poses = torch.stack(torch.meshgrid(x_poses, y_poses, indexing="ij"), dim=-1).view(-1, 2)
+    all_poses = torch.stack(torch.meshgrid(x_poses, y_poses), dim=-1).view(-1, 2)
     # Append orientations
     all_poses = torch.cat([all_poses, torch.zeros(all_poses.shape[0], 1)], dim=-1).to(device).detach()
 
@@ -404,6 +447,120 @@ def rosmsgs_to_maps(rgbmap, heightmap):
     return maps
 
 
+def rosmsgs_to_maps_batch(rgbmap, heightmap):
+    '''Converts input rgbmaps and heightmaps from numpy arrays incoming from ros msgs to tensors that can be passed into produce_costmap.
+
+    Args:
+        - rgbmap:
+            BxHxWx3 Uint8 array containing rgbmap input from ros topic.
+        - heightmap:
+            BxHxWx4 Float array containing the following info about heightmap: min, max, mean, std.
+    Returns:
+        - maps:
+            Dictionary containing two tensors:
+            {
+                'rgb_map': Tensor(B,C,H,W) where C=3 corresponding to RGB values,
+                'height_map': Tensor(B,C,H,W) where C=5 corresponding to min,     max, mean, std, invalid_mask where 1's correspond to invalid cells
+            }
+    '''
+
+    def to_tensor_batch(pics):
+        assert pics.ndim == 4, print("Not a batch of RGB images. Batched 2D images not implemented yet")
+        default_float_dtype = torch.get_default_dtype()
+        if isinstance(pics, np.ndarray):
+            # handle numpy array
+            img = torch.from_numpy(pics.transpose((0, 3, 1, 2))).contiguous()
+            # backward compatibility
+            if isinstance(img, torch.ByteTensor):
+                return img.to(dtype=default_float_dtype).div(255)
+            else:
+                return img
+        else:
+            raise NotImplementedError()
+
+    ## First, convert rgbmap to tensor
+    img_transform = T.Compose([
+        to_tensor_batch,
+        T.Normalize(mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225])
+    ])
+    rgb_map_tensor = img_transform(rgbmap.astype(np.uint8))
+    # Change axes so that map is aligned with robot-centric coordinates
+    rgb_map_tensor = rgb_map_tensor.permute(0,1,3,2)
+
+    ## Now, convert heightmap to tensor
+    hm = torch.from_numpy(heightmap)
+    hm_nan = torch.isnan(hm).any(dim=-1, keepdim=True) | (hm > 1e5).any(dim=-1, keepdim=True) | (hm < -1e5).any(dim=-1, keepdim=True)
+    hm = torch.nan_to_num(hm, nan=0.0, posinf=2, neginf=-2)
+    hm = torch.clamp(hm, min=-2, max=2)
+    hm = (hm - (-2))/(2 - (-2))
+    hm = torch.cat([hm, hm_nan], dim=-1)
+    hm = hm.permute(0,3,1,2)  ## Channels first
+    height_map_tensor = hm.permute(0,1,3,2)
+
+    maps = {
+            'rgb_map':rgb_map_tensor,
+            'height_map':height_map_tensor
+        }
+
+    return maps
+
+def rosmsgs_to_maps_twohead(rgbmap, heightmap):
+    '''Converts input rgbmaps and heightmaps from numpy arrays incoming from ros msgs to tensors that can be passed into produce_costmap.
+
+    Args:
+        - rgbmap:
+            HxWx3 Uint8 array containing rgbmap input from ros topic.
+        - heightmap:
+            HxWx4 Float array containing the following info about heightmap: min, max, mean, std.
+    Returns:
+        - maps:
+            Dictionary containing two tensors:
+            {
+                'rgb_map': Tensor(C,H,W) where C=3 corresponding to RGB values,
+                'height_map': Tensor(C,H,W) where C=5 corresponding to min,     max, mean, std, invalid_mask where 1's correspond to invalid cells
+            }
+    '''
+    ## First, convert rgbmap to tensor
+    img_transform = T.Compose([
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225])
+    ])
+    rgb_map_tensor = img_transform(rgbmap.astype(np.uint8))
+    # Change axes so that map is aligned with robot-centric coordinates
+    rgb_map_tensor = rgb_map_tensor.permute(0,2,1)
+    # import ipdb;ipdb.set_trace()
+    hm = heightmap.copy()
+    mask = hm[:,:,0] > 1000
+    hm[mask,:] = 0.
+    masknp = (1-mask).astype(np.float32).reshape((mask.shape[0], mask.shape[1], 1))
+
+    hm = hm * 10
+    hm[:,:,3] = hm[:,:,3] * 10 # std channel
+    hm = np.clip(hm, -20, 20)
+    heightmap_mask = np.concatenate((hm, masknp), axis=-1)
+    heightmap_mask = heightmap_mask.transpose(2,0,1) # C x H x W
+    height_map_tensor = torch.from_numpy(heightmap_mask.transpose(0,2,1))
+
+    # ## Now, convert heightmap to tensor
+    # hm = torch.from_numpy(heightmap)
+    # hm_nan = torch.isnan(hm).any(dim=-1, keepdim=True) | (hm > 1e5).any(dim=-1, keepdim=True) | (hm < -1e5).any(dim=-1, keepdim=True)
+    # hm = torch.nan_to_num(hm, nan=0.0, posinf=2, neginf=-2)
+    # hm = torch.clamp(hm, min=-2, max=2)
+    # hm = (hm - (-2))/(2 - (-2))
+    # hm = torch.cat([hm, hm_nan], dim=-1)
+    # hm = hm.permute(2,0,1)
+    # height_map_tensor = hm.permute(0,2,1)
+
+    maps = {
+            'rgb_map':rgb_map_tensor,
+            'height_map':height_map_tensor
+        }
+
+    return maps
+
+
 def local_path_to_pixels(local_path, map_metadata):
     '''Returns the pixel locations of a local_path in the costmap.
     
@@ -427,3 +584,71 @@ def local_path_to_pixels(local_path, map_metadata):
     y_pixels = ((y_positions - map_metadata["origin"][1])/map_metadata["resolution"]).long()
 
     return x_pixels, y_pixels
+
+
+def produce_training_input(maps, map_metadata, crop_params, vel=None, fourier_freqs=None):
+    '''Returns a costmap using a trained model from a maps dict.
+
+    Args:
+        - model:
+            nn.Module object, Torch model used for cost inference.
+        - maps: 
+            A dictionary of maps (as would go into TerrainMap) defined as follows:
+            {
+                'rgb_map': Tensor(B,C,H,W) where C=3 corresponding to RGB values,
+                'height_map': Tensor(B,C,H,W) where C=5 corresponding to min,     max, mean, std, invalid_mask where 1's correspond to invalid cells
+            }
+        - map_metadata: 
+            Information about the map in metric space defined as follows: 
+            {
+                'height': map_height [m],
+                'width': map_width [m],
+                'resolution': resolution [m],
+                'origin': origin [m]
+            }
+        - crop_params:
+            Dictionary containing information about the output crops     
+            {
+                'crop_size': [Float, Float] # size in meters of the patch to obtain below the robot,
+                'output_size': [Int, Int] # Size of output image in pixels
+            }
+        - vel:
+            Float of unnormalized velocity at which we want to query the costmap. If name of the model is not CostVelModel or CostFourierVelModel, this should be None.
+        - fourier_freqs:
+            Tensor of fourier frequencies used in the CostFourierVelModel. If the name of the model is different, this should be None.
+            
+    Returns:
+        - input_data:
+            Dictionary containing input values for the network
+            {
+                'patches': Tensor(B, C, H, W) where C = 8, corresponding to the patch at the origin (0, 0) of the map,
+                'vels': None or Tensor(B, 1) of Velocities corresponding to each patch,
+                'fourier_vels': None or Tensor(B, num_freqs*2) of Fourier-parameterized velocities
+            }
+    '''
+    # import pdb;pdb.set_trace()
+    device = "cuda" # "cuda" if torch.cuda.is_available() else "cpu"
+    # print("Creating TerrainMap")
+    tm = TerrainMap(maps=maps, map_metadata=map_metadata, device=device)
+
+    # origin_pose = torch.Tensor([[0, 0, 0]])
+    patch = tm.get_origin_crop_batch(crop_params=crop_params)
+    invalid_flag = process_invalid_patches(patch, thresh=0.5)
+    input_data = {}
+    input_data['patches'] = patch.cuda()
+    if vel is not None:
+        if isinstance(vel, float):
+            vels_vec = (torch.ones(patch.shape[0], 1) * vel/20.0).cuda()
+        else:
+            vels_vec = (torch.from_numpy(vel)/20.0).unsqueeze(1).cuda()
+    else:
+        vels_vec = None
+    if fourier_freqs is not None:
+        fourier_freqs = fourier_freqs.cuda()
+        fourier_vels = (FourierFeatureMapping(vels_vec, fourier_freqs)).cuda()
+    else:
+        fourier_vels = None
+    input_data['vels'] = vels_vec
+    input_data['fourier_vels'] = fourier_vels
+
+    return input_data

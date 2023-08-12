@@ -150,10 +150,10 @@ def cost_function(data, sensor_freq, cost_name, cost_stats, freq_range=None, num
     return cost
 
 class TraversabilityCostNode(object):
-    def __init__(self, cost_stats_dir):
+    def __init__(self, cost_stats_dir, imu_topic):
         
         # Set up subscribers
-        rospy.Subscriber('/wanda/imu/data', Imu, self.handle_imu, queue_size=1)
+        rospy.Subscriber(imu_topic, Imu, self.handle_imu, queue_size=1)
 
         # Set up publishers
         self.cost = None
@@ -183,24 +183,25 @@ class TraversabilityCostNode(object):
 
 
     def handle_imu(self, msg):
-        print("-----")
-        print("Received IMU message")
+        # print("-----")
+        # print("Received IMU message")
         self.buffer.insert(msg.linear_acceleration.z)
         # cost = cost_function(self.buffer.data, self.imu_freq, self.cost_name, self.cost_stats, freq_range=None, num_bins=self.num_bins)
         cost = cost_function(self.buffer.data, self.imu_freq, self.cost_name, self.cost_stats, freq_range=[self.min_freq, self.max_freq], num_bins=None)
-        print(f"Publishing cost: {cost}")
+        # print(f"Publishing cost: {cost}")
         cost_msg = FloatStamped()
         cost_msg.header = msg.header
         cost_msg.data = cost
         self.cost_publisher.publish(cost_msg)
-        print("Published cost!")
+        # print("Published cost!")
 
 
 if __name__ == "__main__":
     rospy.init_node("traversability_cost_publisher", log_level=rospy.INFO)
     rospy.loginfo("Initialized traversability_cost_publisher node")
     cost_stats_dir = rospy.get_param("~cost_stats_dir")
-    node = TraversabilityCostNode(cost_stats_dir)
+    imu_topic = rospy.get_param("~imu_topic")
+    node = TraversabilityCostNode(cost_stats_dir, imu_topic)
     rate = rospy.Rate(100)
 
     while not rospy.is_shutdown():

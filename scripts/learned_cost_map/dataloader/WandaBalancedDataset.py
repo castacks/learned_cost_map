@@ -18,7 +18,7 @@ def balanced_wanda_transform(sample, augment_data=False):
     # Transform left_img=img0, right_img=img1, color_img=imgc, disparity image=disp0
     # Convert to Tensor
     # Transform to pytorch tensors, make sure they are all in CxHxW configuration
-    if ("imgc" in sample) and (sample["imgc"] is not None):
+    if "imgc" in sample:
         img_transform = T.Compose([
             T.ToTensor(),
             T.Normalize(mean=[0.485, 0.456, 0.406],
@@ -156,27 +156,24 @@ class BalancedWandaDataset(Dataset):
         self.map_metadata = map_metadata
         self.crop_params = crop_params
 
-        # cmds_dir_lc = os.path.join(self.data_dir_lc, "cmds.npy")
-        # costs_dir_lc = os.path.join(self.data_dir_lc, "costs.npy")
-        # odoms_dir_lc = os.path.join(self.data_dir_lc, "odoms.npy")
+        cmds_dir_lc = os.path.join(self.data_dir_lc, "cmds.npy")
+        costs_dir_lc = os.path.join(self.data_dir_lc, "costs.npy")
+        odoms_dir_lc = os.path.join(self.data_dir_lc, "odoms.npy")
 
-        # self.cmds_lc = np.load(cmds_dir_lc)
-        # self.costs_lc = np.load(costs_dir_lc)
-        # self.odoms_lc = np.load(odoms_dir_lc)
+        self.cmds_lc = np.load(cmds_dir_lc)
+        self.costs_lc = np.load(costs_dir_lc)
+        self.odoms_lc = np.load(odoms_dir_lc)
 
-        # cmds_dir_hc = os.path.join(self.data_dir_hc, "cmds.npy")
-        # costs_dir_hc = os.path.join(self.data_dir_hc, "costs.npy")
-        # odoms_dir_hc = os.path.join(self.data_dir_hc, "odoms.npy")
+        cmds_dir_hc = os.path.join(self.data_dir_hc, "cmds.npy")
+        costs_dir_hc = os.path.join(self.data_dir_hc, "costs.npy")
+        odoms_dir_hc = os.path.join(self.data_dir_hc, "odoms.npy")
 
-        # self.cmds_hc = np.load(cmds_dir_hc)
-        # self.costs_hc = np.load(costs_dir_hc)
-        # self.odoms_hc = np.load(odoms_dir_hc)
+        self.cmds_hc = np.load(cmds_dir_hc)
+        self.costs_hc = np.load(costs_dir_hc)
+        self.odoms_hc = np.load(odoms_dir_hc)
 
-        self.N_lc = len([name for name in os.listdir(os.path.join(self.data_dir_lc, "rgb_map")) if name.endswith(".npy")])
-        self.N_hc = len([name for name in os.listdir(os.path.join(self.data_dir_hc, "rgb_map")) if name.endswith(".npy")])
-
-        # self.N_lc = self.odoms_lc.shape[0]
-        # self.N_hc = self.odoms_hc.shape[0]
+        self.N_lc = self.odoms_lc.shape[0]
+        self.N_hc = self.odoms_hc.shape[0]
         self.N = self.N_lc + self.N_hc
         print(f"Total frames: {self.N}. {self.N_lc} low cost + {self.N_hc} high cost.")
 
@@ -201,32 +198,25 @@ class BalancedWandaDataset(Dataset):
         if all_data_elem[1] == 0:
             # Low cost
             self.data_dir = self.data_dir_lc
-            # self.cmds = self.cmds_lc
-            # self.costs = self.costs_lc
-            # self.odoms = self.odoms_lc
+            self.cmds = self.cmds_lc
+            self.costs = self.costs_lc
+            self.odoms = self.odoms_lc
         else:
             # High cost
             self.data_dir = self.data_dir_hc
-            # self.cmds = self.cmds_hc
-            # self.costs = self.costs_hc
-            # self.odoms = self.odoms_hc
+            self.cmds = self.cmds_hc
+            self.costs = self.costs_hc
+            self.odoms = self.odoms_hc
 
         idx = all_data_elem[0]
 
-        # # Format the index into the right string
-        # sample["cmd"] = self.cmds[idx]
-        # sample["cost"] = self.costs[idx]
-        # sample["odom"] = self.odoms[idx]
-
-        # Change to take into account new directory structure for combination of 2021 and 2022 data
-        cmd_dir = ""
-        cost_dir = os.path.join(self.data_dir, "cost", f"{idx:06}.npy")
-        sample["cost"] = np.load(cost_dir)[0]
-        odom_dir = os.path.join(self.data_dir, "odom", f"{idx:06}.npy")
-        sample["odom"] = np.load(odom_dir)[0]
+        # Format the index into the right string
+        sample["cmd"] = self.cmds[idx]
+        sample["cost"] = self.costs[idx]
+        sample["odom"] = self.odoms[idx]
 
         # Load images
-        imgc_dir = os.path.join(self.data_dir, "image_left", f"{idx:06}.png")
+        imgc_dir = os.path.join(self.data_dir, "image_left_color", f"{idx:06}.png")
         heightmap_dir = os.path.join(self.data_dir, "height_map", f"{idx:06}.npy")
         rgbmap_dir = os.path.join(self.data_dir, "rgb_map", f"{idx:06}.npy")
 

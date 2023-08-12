@@ -3,28 +3,28 @@ General utilities
 """
 import torch
 import numpy as np
-import gym
+# import gym
 
-class DummyEnv:
-    """
-    Given a traj, construct a dummy environment with the same obs space (needed for some models.)
-    """
-    def __init__(self, sample_traj):
-        self.act_dim = sample_traj['action'].shape[1:]
-        self.action_space = gym.spaces.Box(low=np.ones(self.act_dim)*-float('inf'), high=np.ones(self.act_dim)*float('inf'))
+# class DummyEnv:
+#     """
+#     Given a traj, construct a dummy environment with the same obs space (needed for some models.)
+#     """
+#     def __init__(self, sample_traj):
+#         self.act_dim = sample_traj['action'].shape[1:]
+#         self.action_space = gym.spaces.Box(low=np.ones(self.act_dim)*-float('inf'), high=np.ones(self.act_dim)*float('inf'))
 
-        if isinstance(sample_traj['observation'], torch.Tensor):
-            self.obs_dim = sample_traj['observation'].shape[1:]
-            self.observation_space = gym.spaces.Box(low=np.ones(self.obs_dim)*-float('inf'), high=np.ones(self.obs_dim)*float('inf'))
-        elif isinstance(sample_traj['observation'], dict):
-            self.obs_dim = {k:v.shape[1:] for k,v in sample_traj['observation'].items()}
-            self.observation_space = gym.spaces.Dict({k:gym.spaces.Box(low=np.ones(v)*-float('inf'), high=np.ones(v)*float('inf')) for k,v in self.obs_dim.items()})
+#         if isinstance(sample_traj['observation'], torch.Tensor):
+#             self.obs_dim = sample_traj['observation'].shape[1:]
+#             self.observation_space = gym.spaces.Box(low=np.ones(self.obs_dim)*-float('inf'), high=np.ones(self.obs_dim)*float('inf'))
+#         elif isinstance(sample_traj['observation'], dict):
+#             self.obs_dim = {k:v.shape[1:] for k,v in sample_traj['observation'].items()}
+#             self.observation_space = gym.spaces.Dict({k:gym.spaces.Box(low=np.ones(v)*-float('inf'), high=np.ones(v)*float('inf')) for k,v in self.obs_dim.items()})
 
-    def reset(self):
-        return self.observation_space.sample()
+#     def reset(self):
+#         return self.observation_space.sample()
 
-    def step(self, act):
-        return self.observation_space.sample(), torch.tensor(-float('inf')), torch.tensor(True), {}
+#     def step(self, act):
+#         return self.observation_space.sample(), torch.tensor(-float('inf')), torch.tensor(True), {}
 
 
 def quantile(x, q):

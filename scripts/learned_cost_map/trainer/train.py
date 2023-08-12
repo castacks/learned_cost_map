@@ -8,12 +8,14 @@ import torch.nn as nn
 import torch.optim as optim
 from learned_cost_map.trainer.model import CostModel, CostVelModel, CostFourierVelModel, CostModelEfficientNet, CostFourierVelModelEfficientNet, CostFourierVelModelSmall, CostFourierVelModelRGB, EnsembleCostFourierVelModel, BaselineGeometricModel, BaselineVisualGeometricModel, BaselineGeometricLargeModel, BaselineVisualGeometricLargeModel
 
+from learned_cost_map.trainer.CostNet import TwoHeadCostResNet
+
 from learned_cost_map.trainer.utils import get_dataloaders, get_balanced_dataloaders, preprocess_data, avg_dict, get_FFM_freqs, get_wanda_dataloaders, get_balanced_wanda_dataloaders
 
 import wandb
 import time
 
-USE_WANDB = False
+USE_WANDB = True
 
 def traversability_cost_loss(model, input, labels, mean_cost=None):
     pred_cost = model(input)
@@ -220,11 +222,8 @@ def main(model_name, models_dir, log_dir, map_config, num_epochs = 20, batch_siz
         }
         print("Training configuration: ")
         print(config)
-        print("Setting up wandb init")
-        # wandb.init(project="SARA", reinit=True, config=config, settings=wandb.Settings(start_method='fork'))
-        wandb.init(project="SARA", reinit=True, config=config, settings=wandb.Settings(start_method='thread'))
-        # wandb.init(project="SARA", config=config)
-        print("Done setting up wandb init")
+        wandb.init(project="SARA", reinit=True, config=config, settings=wandb.Settings(start_method='fork'))
+
 
     for epoch in range(num_epochs):
         if not just_eval:
@@ -318,7 +317,6 @@ if __name__ == '__main__':
     print(f"wanda is {args.wanda}")
     print(f"just_eval is {args.just_eval}")
 
-    
     # Run training loop
     main(model_name=args.model,
          models_dir=args.models_dir,

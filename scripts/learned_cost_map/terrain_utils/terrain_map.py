@@ -191,7 +191,7 @@ class TerrainMap:
 
         crop_xs = torch.linspace(-crop_params['crop_size'][0]/2., crop_params['crop_size'][0]/2., crop_params['output_size'][1]).to(self.device)
         crop_ys = torch.linspace(-crop_params['crop_size'][1]/2., crop_params['crop_size'][1]/2., crop_params['output_size'][1]).to(self.device)
-        crop_positions = torch.stack(torch.meshgrid(crop_xs, crop_ys, indexing="ij"), dim=-1) # HxWx2 tensor
+        crop_positions = torch.stack(torch.meshgrid(crop_xs, crop_ys), dim=-1) # HxWx2 tensor, index="ij"
 
         translations = poses[:, :2]  # Nx2 tensor, where each row corresponds to [x, y] position in metric space
         rotations = torch.stack([poses[:, 2].cos(), -poses[:, 2].sin(), poses[:, 2].sin(), poses[:, 2].cos()], dim=-1)  # Nx4 tensor where each row corresponds to [cos(theta), -sin(theta), sin(theta), cos(theta)]
