@@ -5,14 +5,14 @@
 
     <!-- <node pkg="physics_atv_local_mapping" type="colorize_pcl_node.py" name="ColorizePclNode" output="screen" /> -->
 
-    <arg name="model_dir" default="$(find learned_cost_map)/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0"/> 
+    <arg name="model_dir" default="$(find learned_cost_map)/models/train_CostFourierVelModel_lr_3e-4_g_99e-1_bal_aug_l2_scale_10.0"/>
 
     <!-- Use model below for finetuned model  -->
     <!-- <arg name="model_dir" default="$(find learned_cost_map)/models/finetune_wanda_CostFourierVelModel_lr_1e-5_g_99e-1_aug_l2_scale_10.0"/> -->
 
     <arg name="model_name" default="CostFourierVelModel"/>
-    <arg name="map_config" default="$(find learned_cost_map)/configs/map_params.yaml"/> 
-    <arg name="costmap_config" default="$(find learned_cost_map)/configs/output_costmap_params.yaml"/> 
+    <arg name="map_config" default="$(find learned_cost_map)/configs/map_params.yaml"/>
+    <arg name="costmap_config" default="$(find learned_cost_map)/configs/output_costmap_params.yaml"/>
     <arg name="height_map_topic" default="/local_height_map_inflate"/>
     <arg name="rgb_map_topic" default="/local_rgb_map_inflate"/>
     <arg name="odometry_topic" default="/integrated_to_init"/>
@@ -25,11 +25,44 @@
         <param name="height_map_topic" value="$(arg height_map_topic)"/>
         <param name="rgb_map_topic" value="$(arg rgb_map_topic)"/>
         <param name="odometry_topic" value="$(arg odometry_topic)"/>
-    </node>    
+    </node>
 
-    <include file="$(find learned_cost_map)/launch/traversability_cost_publisher.launch"/>
+    <!-- <include file="$(find learned_cost_map)/launch/traversability_cost_publisher.launch"/> -->
+
+
+        <!-- <node pkg="physics_atv_deep_stereo_vo" type="stereo_node_multisense.py" name="stereo_node_multisense" output="screen" >
+          <param name ="/pc_transform_ground" value="false"/>
+          <param name ="/pc_max_dist" value="20.0"/>
+          <param name ="/pc_min_dist" value="1"/>
+          <param name ="/pc_max_height" value="2.0"/>
+          <param name ="/image_rect" value="true"/>
+          <param name ="/color_image_topic" value="/multisense/left/image_rect_color"/>
+          <param name ="/visualize_depth" value="false"/>
+          <param name ="/image_input_w" value="512"/>
+          <param name ="/image_input_h" value="384"/>
+          <param name ="/image_compressed" value="false"/>
+        </node>
+
+        <node pkg="physics_atv_deep_stereo_vo" type="tartanvo_node.py" name="tartanvo_node" output="screen" >
+        </node>
+
+        <node pkg="physics_atv_local_mapping" type="local_mapping_node" name="localmapping_node" output="screen" >
+            <param name ="/filter_outliers" value="false"/>
+            <param name ="/downsample_pointcloud_before" value="false"/>
+            <param name ="/downsample_leafsize_before" value="0.1"/>
+            <param name ="/downsample_pointcloud_after" value="false"/>
+            <param name ="/downsample_leafsize_after" value="0.02"/>
+            <param name ="/resolution" value="0.02"/>
+            <param name ="/max_x" value="10"/>
+            <param name ="/min_x" value="-2"/>
+            <param name ="/max_y" value="6"/>
+            <param name ="/min_y" value="-6"/>
+            <param name ="/pc_frame_skip" value="1"/>
+            <param name ="/pc_buffer_size" value="10"/>
+            <param name ="/visualize_maps" value="false"/>
+            <param name ="/publish_pc_for_debug" value="true"/>
+
+        </node> -->
 
 
 </launch>
-
-
